@@ -1,6 +1,6 @@
 # ServerCTL
 
-First draft of the ServerCTL script to integrate the middleware Distributor
+First draft of the ServerCTL script to integrate the middleware Distributor.
 Basic funcionalities are to be:
   - Create a deployment on Kubernetes
   - Verify status of pod
