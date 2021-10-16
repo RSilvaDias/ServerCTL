@@ -18,6 +18,7 @@ def DeploymentName():
     return DeploymentName
 
 def PodName(DeployName):
+    config.load_kube_config()
     v1 = client.CoreV1Api()
     ret = v1.list_pod_for_all_namespaces(watch=False)
     for i in ret.items:
