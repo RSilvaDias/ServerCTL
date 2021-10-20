@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serverctl
+  labels:
+    app: serverctl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: serverctl
+  template:
+    metadata:
+      labels:
+        app: serverctl
+    spec:
+      containers:
+      - name: serverctl
+        image: docker.io/rsdias/ctl:server
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5555
