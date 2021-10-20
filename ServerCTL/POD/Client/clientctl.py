@@ -6,7 +6,7 @@ context = zmq.Context()
 #  Socket to talk to server
 print("Connecting to CTL server…")
 socket = context.socket(zmq.REQ)
-socket.connect("tcp://clt:5555")  # CTL pod ClusterIP
+socket.connect("tcp://ctl:5555")  # CTL pod ClusterIP
 
 print("Name of deploy : ")
 name = input()
