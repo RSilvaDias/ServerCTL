@@ -1,6 +1,14 @@
 [
-{
-  "id": 1,
-  "name": "servicetest"
-}
+  {
+    "id": 1,
+    "name": "servicetest"
+  },
+  {
+    "id": 2,
+    "name": "servicetest2"
+  },
+  {
+    "id": 3,
+    "name": "servicetest3"
+  }
 ]
