@@ -97,6 +97,7 @@ def create_service():
     names.append(name)
     servicename = request.json['name']
     finalname = servicename.lower()
+    createDeployment(finalname)
     return jsonify({'name': name}), 201
 
 if __name__ == '__main__':
