@@ -6,15 +6,12 @@ from kubernetes.client.api import core_v1_api
 
 #### Kubernetes Functions ####
 def deploymentName(DeploymentName):
-    #DeploymentName = input("Deployment name: ").strip()
     f = open('%s.yaml' %(DeploymentName), "x")
-
     data = {'apiVersion': 'apps/v1', 'kind': 'Deployment', 'metadata': {'name': DeploymentName,'labels': {'app': 'nginx'}}, 'spec':
             {'replicas': 1, 'selector': {'matchLabels': {'app': 'nginx'}}, 'template': {'metadata': {'labels': {'app': 'nginx'}},
              'spec': {'containers': [{'name': 'nginx', 'image': 'nginx:1.15.4', 'ports': [{'containerPort': 80}]}]}}}}
     with open('%s.yaml' %(DeploymentName), "w") as file:
         documents = yaml.dump(data, file)
-    #return DeploymentName
 
 def podName(DeployName):
     #config.load_kube_config()
@@ -43,7 +40,7 @@ def create_service(Deployname):
     )
     #Creation of the deployment on namespace default
     core_v1_api.create_namespaced_service(namespace="default", body=body)
-    print("Service created ! Name : %s-service" % Deployname)
+    #print("Service created ! Name : %s-service" % Deployname)
     #return ("Service created ! Name : %s-service" % Deployname)
 
 def getClusterIP(Deployname):    #Obsolete , we don't need clusterIP to connect to pod.
@@ -51,13 +48,13 @@ def getClusterIP(Deployname):    #Obsolete , we don't need clusterIP to connect 
     #config.load_incluster_config()
     core_v1_api = client.CoreV1Api()
     service = core_v1_api.read_namespaced_service(name="%s-service" % Deployname, namespace="default")
-    print("Cluster_IP :" ,service.spec.cluster_ip)
+    #print("Cluster_IP :" ,service.spec.cluster_ip)
     return service.spec.cluster_ip
 
 def verifyStatus(pod_name):
     core_v1 = core_v1_api.CoreV1Api()
     api_response = core_v1.read_namespaced_pod(name=pod_name,namespace="default")
-    print("Pod Status : " , api_response.status.phase)
+    #print("Pod Status : " , api_response.status.phase)
     return api_response.status.phase
 
 def createDeployment(name):
@@ -87,7 +84,7 @@ def get_names():
     return jsonify({'names': names})
 
 @app.route('/names', methods=['POST'])
-def create_service():
+def createService():
     if not request.json or not 'name' in request.json:
         abort(400)
     name = {
@@ -101,5 +98,6 @@ def create_service():
     return jsonify({'name': name}), 201
 
 if __name__ == '__main__':
-    #config.load_incluster_config()
-    app.run(debug=True, port = 8080)
+    #config.load_kube_config()
+    config.load_incluster_config()
+    app.run(host="0.0.0.0",port=5000)
