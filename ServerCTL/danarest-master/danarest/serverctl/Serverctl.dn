@@ -16,7 +16,7 @@ component provides serverctl.Serverctl requires io.Output out, net.http.HTTPRequ
         Service s = new Service()
         s.name = name
         char encoded[] = jsonEncoder.jsonFromData(s, null)
-  			msg = httpreq.post(url,header,encoded)
+  	msg = httpreq.post(url,header,encoded)
         out.println("$(msg.responseCode)")
       }
 }
