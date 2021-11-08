@@ -1,0 +1,22 @@
+component provides serverctl.Serverctl requires io.Output out, net.http.HTTPRequest httpreq,data.json.JSONEncoder jsonEncoder{
+
+			const char url[] = "34.134.175.99:8080/names" //ServerCTl
+			HTTPResponse msg = new HTTPResponse()
+
+      void Serverctl:get_service_names(){
+        msg = httpreq.get(url)
+        out.println("$(msg.responseCode)")
+        out.println("$(msg.content)")
+      }
+
+      void Serverctl:create_service(char name[]){
+        Header header = new Header()
+        header.key = "Content-Type"
+  			header.value = "application/json"
+        Service s = new Service()
+        s.name = name
+        char encoded[] = jsonEncoder.jsonFromData(s, null)
+  			msg = httpreq.post(url,header,encoded)
+        out.println("$(msg.responseCode)")
+      }
+}

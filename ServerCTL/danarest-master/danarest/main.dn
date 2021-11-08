@@ -1,0 +1,14 @@
+component provides App requires serverctl.Serverctl SCTL, io.Output out, io.Input in {
+
+  int App:main(AppParam params[]){
+
+      char servicename[]
+
+      out.println("Service name : ")
+      servicename = in.readln()
+
+      //SCTL.create_service(servicename)
+      SCTL.get_service_names()
+      return 0
+  }
+}
