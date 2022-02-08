@@ -1,0 +1,47 @@
+component provides interceptor.TCPInterceptor requires net.TCPSocket {
+	TCPSocket cs //client socket
+	int respSize
+
+	TCPInterceptor:TCPInterceptor(TCPSocket client) {
+		cs = client
+		respSize = 0
+	}
+
+	int TCPInterceptor:getResponseSize() {
+		return respSize
+	}
+
+	byte[] TCPInterceptor:recv(int n) {
+		return cs.recv(n)
+	}
+	
+	int TCPInterceptor:send(byte dat[]) {
+		respSize += dat.arrayLength
+		return cs.send(dat)
+	}
+
+	bool TCPInterceptor:connect(char address[], int port) {
+		return cs.connect(address, port)
+	}
+	
+	
+	bool TCPInterceptor:accept(TCPServerSocket server) {
+		return cs.accept(server)
+	}
+	
+	
+	void TCPInterceptor:disconnect() {
+		cs.disconnect()
+	}
+	
+	
+	NetworkEndpoint TCPInterceptor:getRemoteEndpoint() {
+		return cs.getRemoteEndpoint()
+	}
+	
+	
+	NetworkEndpoint TCPInterceptor:getLocalEndpoint() {
+		return cs.getLocalEndpoint()
+	}
+
+}

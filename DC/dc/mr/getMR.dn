@@ -1,0 +1,158 @@
+data Response {
+	// 1 OK - 2 FAILED
+	byte status
+	// if it's null or "" this has to be translated to null
+	char value[]
+}
+
+const char debugMSG[] = "[@MostRecentData]"
+
+component provides mr.getMR requires io.Output out,
+	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
+
+	static ConfigFile configFile = null
+	static Mutex lock = new Mutex()
+    IPAddr remoteDistsIps[] = null
+
+    const char LOCALHOST[] = "remotedist1"
+
+    void setupRemoteDistsIPs() {
+			if (remoteDistsIps == null) {
+				remoteDistsIps = new IPAddr[2]
+				remoteDistsIps[0] = new IPAddr()
+				remoteDistsIps[0].ip = new char[](LOCALHOST)
+				remoteDistsIps[0].port = 5000
+			}
+		}
+
+	MySQL getMySQL() {
+		MySQL mysql = null
+		if (configFile == null) {
+			configFile = new ConfigFile("../configs/build/dc/database/database.config")
+		}
+		char host[] = configFile.getValue("database")
+		char user[] = configFile.getValue("db_user")
+		char pass[] = configFile.getValue("db_pass")
+		mysql = new MySQL(host, 3306, user, pass, "data_collector")
+		return mysql
+	}
+
+	// NOTE: This is a problem for the NFRProxy
+	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
+	void getMR:storeData(byte content[], char id[], DocStream s) {
+		MySQL mysql = getMySQL()
+		mysql.execute(new char[]("INSERT INTO data (value, uuid) VALUES (\"", codifier.encode(content)
+			,"\", \"", id ,"\");"))
+		mysql.close()
+	}
+
+	void getMR:gMR(DocStream stream) {
+		//
+        //  Implementation
+        //  asynch::connectAndSend(addr, content, true)
+        queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
+	}
+
+	// implementing chunked transfer protocol
+	void queryExec(char query[], DocStream stream) {
+		MySQL mysql
+		MySQLRow rows[]
+		mutex(lock) {
+			mysql = getMySQL()
+			mysql.execute(query)
+			rows = mysql.fetchAll()
+		}
+		if (rows == null) {
+			stream.write("{\"error\": \"resource data not found\"}")
+		} else {
+			stream.write("{ \"data\": [ ")
+			for (int i = 0; i < rows.arrayLength; i++) {
+				char helper[] = null
+				if (i != 0) { helper = ", " }
+				stream.write(new char[](helper, codifier.decode(rows[i].fields[1].value)))
+			}
+			stream.write("] }")
+		}
+		mysql.close()
+		//}
+	}
+    void sendMsgToRemoteDists(char msg[]) {
+			setupRemoteDistsIPs()
+			for (int i = 0; i < remoteDistsIps.arrayLength; i++) {
+				connectAndSend(remoteDistsIps[i], msg, true)
+			}
+		}
+    
+    bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
+		if (!remoteObj.connect(addr.ip, addr.port)) {
+			out.println("Connection error!")
+			return false
+		}
+		return true
+	}
+
+    Response parseResponse(char content[]) {
+		String helper[] = strUtil.explode(content, "!")
+		Response response
+		if (helper.arrayLength > 1) {
+			response = parser.jsonToData(helper[0].string, typeof(Response), null)
+			Response response2 = new Response()
+			response2.value = helper[1].string
+			response2.status = response.status
+			response = response2
+		} else {
+			response = parser.jsonToData(content, typeof(Response), null)
+		}
+		return response
+	}
+
+    Response readResponse(TCPSocket s) {
+		Response response = null
+		char buf[] = null
+		int len = 0
+		char command[] = null
+		while ((buf = s.recv(1)).arrayLength > 0) {
+			command = new char[](command, buf)
+			len++
+			//stop condition
+			if (len >= 4) {
+				if ((command[len-4] == "\r") && (command[len-3] == "\r") &&
+					(command[len-2] == "\r") && (command[len-1] == "\r")) {
+					response = parseResponse(strUtil.subString(command,
+						0, command.arrayLength-4))
+					break
+				}
+			}
+		}
+		if (response == null) { s.disconnect() }
+		return response
+	}
+
+    Response connectAndSend(IPAddr addr, char content[], bool readResponse) {
+		TCPSocket remoteObj = new TCPSocket()
+		Response resp = null
+		if (establishConnection(addr, remoteObj)) {
+			remoteObj.send(content)
+			if (readResponse) { resp = readResponse(remoteObj) }
+			remoteObj.disconnect()
+		}
+		return resp
+	}
+
+    void AdaptEvents:inactive() {
+		if (content != null) {
+			content = getContents()
+			char msg[] = new char[]("clearquery!\r\r\r\r")
+			sendMsgToRemoteDists(msg)
+		}
+	}
+
+	void AdaptEvents:active() {
+		if (content != null) {
+			char state[] = parser.jsonFromArray(content, null)
+			char msg[] = new char[]("../dc/mr.o!", state, "\r\r\r\r")
+			sendMsgToRemoteDists(msg)
+		}
+	}
+
+}

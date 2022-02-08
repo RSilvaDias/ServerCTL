@@ -1,0 +1,39 @@
+/* DataCollectorManager.dn Interface
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - June @ 2020
+ */
+uses data.adt.HashTable
+uses ws.DocStream
+
+// this are examples of data -- this does not implement the real InterSCity data structures
+data Location {
+	char lat[]
+	char lon[]
+}
+
+data PublicBusData {
+	Location location
+	int speed
+	char uuid[]
+	char busline[]
+	char timestamp[]
+}
+
+interface DataCollectorManager {
+	// NOTE: This is a problem for the NFRProxy
+	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
+	void storeData(byte content[], char uuid[], DocStream stream)
+
+	// "/collector/resources/data" Get historical data of sensor capabilities of all city resources
+	void getHistoricalData(DocStream stream)
+
+	// "/collector/resources/{uuid}/data" Get historical data of sensor capabilities of a specific city resource
+	void getHistoricalDataResource(char uuid[], DocStream stream)
+
+	// "/collector/resources/data/last" Get the most recent data of sensor capabilities from all city resources
+	void getMostRecentData(DocStream stream)
+
+	// "/collector/resources/{uuid}/data/last" Get the most recent data of sensor capabilities from a specific city resource
+	void getMostRecentDataResource(char uuid[], DocStream stream)
+}

@@ -1,0 +1,34 @@
+/* NFRProxy.dn
+ *
+ * Author: Roberto Rodrigues Filho - Sept @ 2018
+ */
+component provides ws.Web requires io.Output out, ws.Web:nfrp web, interceptor.DSInterceptor {
+
+	bool Web:get(char path[], DocStream stream, HashTable params) {
+		bool result = false
+		DSInterceptor interceptor = new DSInterceptor(null, null, null)
+		interceptor.set(stream)
+		result = web.get(path, interceptor, params)
+		if ((result) && (interceptor.get() != null)) {
+			stream.write(interceptor.get())
+		}
+		return result
+		//return web.get(path, stream, params)
+	}
+
+	bool Web:post(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		return web.post(path, contentType, content, stream, params)
+	}
+
+	bool Web:put(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		return false
+	}
+
+	bool Web:delete(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		return false
+	}
+
+	String[] Web:getURLPatterns() {
+		return web.getURLPatterns()
+	}
+}

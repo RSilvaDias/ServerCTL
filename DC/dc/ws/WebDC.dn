@@ -1,0 +1,73 @@
+/* WebDC.dn
+ *
+ * This works as a dispatcher to send data to microservices.
+ *
+ * Author: Roberto Rodrigues Filho - Sept @ 2018
+ * Changed: Roberto Rodrigues Filho - Jun @ 2020
+ */
+component provides ws.Web:nfrp requires io.Output out, data.StringUtil strUtil,
+	data_collector.DataCollectorManager dataCollectorManager, mrr.getMRR gmrr , hdr.getHDR ghdr, hd.getHD ghd , mr.getMR gmr {
+
+	bool match(char path[], char expr[]) {
+		String helper[] = strUtil.explode(path, "?")
+		String dirs[] = strUtil.explode(helper[0].string, "/")
+		String exprDirs[] = strUtil.explode(expr, "/")
+		if (dirs.arrayLength != exprDirs.arrayLength) { return false }
+		for (int i = 0; i < exprDirs.arrayLength; i++) {
+			if ((dirs[i].string != exprDirs[i].string) && (exprDirs[i].string != "*")) {
+				return false
+			}
+		}
+		return true
+	}
+
+	void failed(DocStream s) {
+		s.write("{\"response\" : \"failed\"}")
+	}
+
+	bool Web:get(char path[], DocStream stream, HashTable params) {
+		// getting id from params
+		if (params == null) { failed(stream) }
+		String idStr = params.get("id")
+		char id[] = idStr.string
+		// handling request
+		if (match(path, "/collector/resources/data")) {
+			ghd.gHD(stream)
+		} else if (match(path, "/collector/resources/*/data")) {
+			ghdr.gHDR(id, stream)
+		} else if (match(path, "/collector/resources/data/last")) {
+			gmr.gMR(stream)
+		} else if (match(path, "/collector/resources/*/data/last")) {
+			gmrr.gMRR(id,stream)
+		} else { failed(stream) }
+		return true
+	}
+
+	bool Web:post(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		// getting id from params
+		if (params == null) { failed(stream) }
+		String idStr = params.get("id")
+		char id[] = idStr.string
+		// handling requests
+		if (match(path, "/collector/store/*")) {
+			dataCollectorManager.storeData(content, id, stream)
+		} else { failed(stream) }
+		return true
+	}
+	
+	bool Web:put(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		return false
+	}
+
+	bool Web:delete(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+		return false
+	}
+
+	String[] Web:getURLPatterns() {
+		String exprs[] = new String[]()
+		exprs = new String[](exprs, new String("/collector/store/{id}"))
+		exprs = new String[](exprs, new String("/collector/resources/{id}/data"))
+		exprs = new String[](exprs, new String("/collector/resources/{id}/data/last"))
+		return exprs
+	}
+}

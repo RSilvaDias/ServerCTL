@@ -1,0 +1,20 @@
+/* DataCollectorManager.dn Interface
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - June @ 2020
+ */
+uses data.adt.HashTable
+uses ws.DocStream
+
+data Response {
+	// 1 OK - 2 FAILED
+	byte status
+	// if it's null or "" this has to be translated to null
+	char value[]
+}
+
+interface getMR {
+
+  void storeData(byte content[], char uuid[], DocStream stream)
+	void gMR(DocStream stream)
+}

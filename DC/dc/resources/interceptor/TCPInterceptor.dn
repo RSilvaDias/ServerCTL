@@ -1,0 +1,4 @@
+interface TCPInterceptor extends net.TCPSocket {
+	TCPInterceptor(store TCPSocket client)
+	int getResponseSize()
+}

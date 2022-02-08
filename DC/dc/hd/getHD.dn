@@ -1,0 +1,71 @@
+/* DataCollectorManager.dn
+ *
+ * This component is responsible to implement the business logic of the DataCollector microservice.
+ *
+ * This version includes:
+ *  - implementation of the storeData as a way to support synchronous data insertion;
+ *  - implementation all functions defined of DataCollector;
+ * More info at:
+ *  - http://playground.interscity.org/#/
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - Sept @ 2018
+ */
+const char debugMSG[] = "[@historical_data]"
+
+component provides hd.getHD requires io.Output out,
+	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
+
+	static ConfigFile configFile = null
+	static Mutex lock = new Mutex()
+
+	MySQL getMySQL() {
+		MySQL mysql = null
+		if (configFile == null) {
+			configFile = new ConfigFile("../configs/build/dc/database/database.config")
+		}
+		char host[] = configFile.getValue("database")
+		char user[] = configFile.getValue("db_user")
+		char pass[] = configFile.getValue("db_pass")
+		mysql = new MySQL(host, 3306, user, pass, "data_collector")
+		return mysql
+	}
+
+	// NOTE: This is a problem for the NFRProxy
+	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
+	void getHD:storeData(byte content[], char id[], DocStream s) {
+		MySQL mysql = getMySQL()
+		mysql.execute(new char[]("INSERT INTO data (value, uuid) VALUES (\"", codifier.encode(content)
+			,"\", \"", id ,"\");"))
+		mysql.close()
+	}
+
+	// "/collector/resources/data" Get historical data of sensor capabilities of all city resources
+	void getHD:gHD(DocStream stream) {
+		queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)
+	}
+
+	// implementing chunked transfer protocol
+	void queryExec(char query[], DocStream stream) {
+		MySQL mysql
+		MySQLRow rows[]
+		mutex(lock) {
+			mysql = getMySQL()
+			mysql.execute(query)
+			rows = mysql.fetchAll()
+		}
+		if (rows == null) {
+			stream.write("{\"error\": \"resource data not found\"}")
+		} else {
+			stream.write("{ \"data\": [ ")
+			for (int i = 0; i < rows.arrayLength; i++) {
+				char helper[] = null
+				if (i != 0) { helper = ", " }
+				stream.write(new char[](helper, codifier.decode(rows[i].fields[1].value)))
+			}
+			stream.write("] }")
+		}
+		mysql.close()
+		//}
+	}
+}
