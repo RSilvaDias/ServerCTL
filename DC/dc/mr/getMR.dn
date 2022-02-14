@@ -40,7 +40,7 @@ component provides mr.getMR requires io.Output out,
 		mysql.close()
 	}
 
-	void getMR:gMRR(char uuid[], DocStream stream) {
+	void getMR:gMR(char uuid[], DocStream stream) {
 		queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
 	}
 
