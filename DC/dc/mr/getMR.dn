@@ -1,29 +1,23 @@
-data Response {
-	// 1 OK - 2 FAILED
-	byte status
-	// if it's null or "" this has to be translated to null
-	char value[]
-}
-
-const char debugMSG[] = "[@MostRecentData]"
+/* DataCollectorManager.dn
+ *
+ * This component is responsible to implement the business logic of the DataCollector microservice.
+ *
+ * This version includes:
+ *  - implementation of the storeData as a way to support synchronous data insertion;
+ *  - implementation all functions defined of DataCollector;
+ * More info at:
+ *  - http://playground.interscity.org/#/
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - Sept @ 2018
+ */
+const char debugMSG[] = "[@mostRecentData]"
 
 component provides mr.getMR requires io.Output out,
 	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
-    IPAddr remoteDistsIps[] = null
-
-    const char LOCALHOST[] = "remotedist1"
-
-    void setupRemoteDistsIPs() {
-			if (remoteDistsIps == null) {
-				remoteDistsIps = new IPAddr[2]
-				remoteDistsIps[0] = new IPAddr()
-				remoteDistsIps[0].ip = new char[](LOCALHOST)
-				remoteDistsIps[0].port = 5000
-			}
-		}
 
 	MySQL getMySQL() {
 		MySQL mysql = null
@@ -46,11 +40,8 @@ component provides mr.getMR requires io.Output out,
 		mysql.close()
 	}
 
-	void getMR:gMR(DocStream stream) {
-		//
-        //  Implementation
-        //  asynch::connectAndSend(addr, content, true)
-        queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
+	void getMR:gMRR(char uuid[], DocStream stream) {
+		queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
 	}
 
 	// implementing chunked transfer protocol
@@ -76,83 +67,4 @@ component provides mr.getMR requires io.Output out,
 		mysql.close()
 		//}
 	}
-    void sendMsgToRemoteDists(char msg[]) {
-			setupRemoteDistsIPs()
-			for (int i = 0; i < remoteDistsIps.arrayLength; i++) {
-				connectAndSend(remoteDistsIps[i], msg, true)
-			}
-		}
-    
-    bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
-		if (!remoteObj.connect(addr.ip, addr.port)) {
-			out.println("Connection error!")
-			return false
-		}
-		return true
-	}
-
-    Response parseResponse(char content[]) {
-		String helper[] = strUtil.explode(content, "!")
-		Response response
-		if (helper.arrayLength > 1) {
-			response = parser.jsonToData(helper[0].string, typeof(Response), null)
-			Response response2 = new Response()
-			response2.value = helper[1].string
-			response2.status = response.status
-			response = response2
-		} else {
-			response = parser.jsonToData(content, typeof(Response), null)
-		}
-		return response
-	}
-
-    Response readResponse(TCPSocket s) {
-		Response response = null
-		char buf[] = null
-		int len = 0
-		char command[] = null
-		while ((buf = s.recv(1)).arrayLength > 0) {
-			command = new char[](command, buf)
-			len++
-			//stop condition
-			if (len >= 4) {
-				if ((command[len-4] == "\r") && (command[len-3] == "\r") &&
-					(command[len-2] == "\r") && (command[len-1] == "\r")) {
-					response = parseResponse(strUtil.subString(command,
-						0, command.arrayLength-4))
-					break
-				}
-			}
-		}
-		if (response == null) { s.disconnect() }
-		return response
-	}
-
-    Response connectAndSend(IPAddr addr, char content[], bool readResponse) {
-		TCPSocket remoteObj = new TCPSocket()
-		Response resp = null
-		if (establishConnection(addr, remoteObj)) {
-			remoteObj.send(content)
-			if (readResponse) { resp = readResponse(remoteObj) }
-			remoteObj.disconnect()
-		}
-		return resp
-	}
-
-    void AdaptEvents:inactive() {
-		if (content != null) {
-			content = getContents()
-			char msg[] = new char[]("clearquery!\r\r\r\r")
-			sendMsgToRemoteDists(msg)
-		}
-	}
-
-	void AdaptEvents:active() {
-		if (content != null) {
-			char state[] = parser.jsonFromArray(content, null)
-			char msg[] = new char[]("../dc/mr.o!", state, "\r\r\r\r")
-			sendMsgToRemoteDists(msg)
-		}
-	}
-
 }
