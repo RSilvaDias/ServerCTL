@@ -1,0 +1,201 @@
+// Least Recently Used (LRU) Cache Component
+//
+// Please note:
+//  * this componeont is not thread safe
+//  * this component is not optimised for memory efficiency
+//  * this component implements the classical hashtable with chaining
+//  * this component does not implement cached item expiration
+//  * we also consider that the size of the cached item is never bigger than CACHE_MAX_SIZE
+// Comments:
+//  * I wonder whether garbage collector is working with this implementation
+// and preventing memory leak
+//
+// Author: Roberto Rodrigues Filho
+// Date: December, 2019
+
+component provides cache.Cache requires cache.Hash hashFunc, io.Output out, 
+	time.DateUtil dateUtil, time.Calendar calendar {
+	
+	CacheItem table[] = new CacheItem[Cache.TABLE_SIZE]
+	int cacheSize = 0
+
+	// ----- managing eviction queue
+	CacheItem mru = null // tail
+	CacheItem lru = null // head
+
+	void addToQueue(store CacheItem item) {
+		item.evictionNext = null
+		item.evictionPrior = null
+		if ((mru == null) && (lru == null)) {
+			mru = item
+			lru = item
+		} else {
+			mru.evictionNext = item
+			item.evictionPrior = mru
+			mru = item
+		}
+	}
+
+	void removeFromQueue() {
+		delete(lru.key)
+	}
+
+	// item is already part of the queue
+	void updateTailOfQueue(store CacheItem item) {
+		if ((mru != null) && (lru != null)) {
+			if (item.key != mru.key) {
+				if (item.key == lru.key) {
+					lru = item.evictionNext
+					lru.evictionPrior = null
+				} else {
+					item.evictionPrior.evictionNext = item.evictionNext
+					item.evictionNext.evictionPrior = item.evictionPrior
+				}
+				item.evictionNext = null
+				item.evictionPrior = null
+				addToQueue(item)
+			} else { /* do nothing */ }
+		} else { throw new Exception("Updating a queue that does not exist!")}
+	}
+	// ----- managing eviction queue
+
+	// ----- managing cache items
+	bool isStale(CacheItem item) {
+		int diff = dateUtil.toMilliseconds(dateUtil.diff(item.timeStamp, calendar.getTime()))
+		if (item.maxAge == 0) {
+			if (diff > Cache.MAX_AGE) {
+				return true
+			}
+		} else {
+			if (diff > item.maxAge) {
+				return true
+			}
+		}
+		return false
+	}
+
+	byte[] Cache:get(char key[]) {
+		int index = hashFunc.hash(key)
+		if (table[index] == null) {
+			return null
+		} else {
+			if (table[index].key == key) {
+				if (isStale(table[index])) {
+					delete(key)
+				} else {
+					updateTailOfQueue(table[index])
+					return table[index].content
+				}
+			} else {
+				CacheItem helper = table[index]
+				while ((helper = helper.chainNext) != null) {
+					if (helper.key == key) {
+						if (isStale(helper)) {
+							delete(key)
+						} else {
+							updateTailOfQueue(helper)
+							return helper.content
+						}
+					}
+				}
+			}
+		}
+		return null
+	}
+
+	// before calling update, insert calls get -- we don't have to update the queue
+	void update(char key[], byte content[]) {
+		int oldContentSize = mru.content.arrayLength
+		while (((cacheSize - oldContentSize) + content.arrayLength) > Cache.CACHE_MAX_SIZE) {
+			removeFromQueue()
+		}
+		mru.content = content
+		mru.timeStamp = calendar.getTime()
+		cacheSize = (cacheSize - oldContentSize) + content.arrayLength
+	} 
+	
+	// not thread safe -- updates and descreases cacheSize variable
+	void Cache:insert(char key[], byte content[], int maxAge) {
+		if (content.arrayLength > Cache.CACHE_MAX_SIZE) {
+			throw new Exception("Error! Cached item size is bigger than CACHE_MAX_SIZE!")
+		}
+		if (get(key) != null) { 
+			update(key, content)
+			return
+		}
+		CacheItem item = new CacheItem()
+		item.key = key
+		item.content = content
+		item.timeStamp = calendar.getTime()
+		item.maxAge = maxAge * 1000
+		while ((cacheSize + item.content.arrayLength) > Cache.CACHE_MAX_SIZE) {
+			removeFromQueue()
+		}
+		int index = hashFunc.hash(item.key)
+		if (table[index] == null) {
+			table[index] = item
+		} else {
+			CacheItem helper = table[index]
+			while (helper.chainNext != null) { helper = helper.chainNext }
+			helper.chainNext = item
+		}
+		cacheSize = cacheSize + item.content.arrayLength
+		addToQueue(item)
+	}
+
+	void Cache:delete(char key[]) {
+		int index = hashFunc.hash(key)
+		if (table[index] != null) {
+			CacheItem current = table[index]
+			CacheItem previous = null
+			while (current != null) {
+				if (current.key == key) {
+					// updates eviction queue
+					if ((current.key == mru.key) 
+						&& (mru.key == lru.key)) {
+						deleteAll()
+						return
+					} else if (current.key == mru.key) {
+						mru = mru.evictionPrior
+						mru.evictionNext = null
+					} else if (current.key == lru.key) {
+						lru = lru.evictionNext
+						lru.evictionPrior = null
+					} else {
+						current.evictionPrior.evictionNext = current.evictionNext
+						current.evictionNext.evictionPrior = current.evictionPrior
+					}
+					// removes items from hash table
+					if (previous == null) { table[index] = table[index].chainNext }
+					else { previous.chainNext = current.chainNext }
+					cacheSize = cacheSize - current.content.arrayLength
+					if (current.chainNext != null) { current.chainNext = null }
+					if (current.evictionPrior != null) { current.evictionPrior = null }
+					if (current.evictionNext != null) { current.evictionNext = null }
+					return
+				}
+				previous = current
+				current = current.chainNext
+			}
+		}
+	}
+
+	void printHashTable() {
+		out.println("---> ")
+		for (int i = 0; i < table.arrayLength; i++) {
+			if (table[i] != null) {
+				out.print("[$(table[i].key)] ")
+				CacheItem helper = table[i]
+				while ((helper = helper.chainNext) != null) { out.print("$(helper.key) ") }	
+			}
+		}
+		out.print("\n")
+	}
+
+	void Cache:deleteAll() {
+		table = new CacheItem[Cache.TABLE_SIZE]
+		mru = null
+		lru = null
+		cacheSize = 0
+	}
+}

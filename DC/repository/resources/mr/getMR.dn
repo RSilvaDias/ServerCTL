@@ -1,0 +1,14 @@
+/* DataCollectorManager.dn Interface
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - June @ 2020
+ */
+uses data.adt.HashTable
+uses ws.DocStream
+
+
+interface getMR {
+
+  void storeData(byte content[], char uuid[], DocStream stream)
+	void gMR(DocStream stream)
+}

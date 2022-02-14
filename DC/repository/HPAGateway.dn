@@ -1,0 +1,121 @@
+// HPAGateway: Module that interacts with stackdriver
+//
+// Author: Roberto Rodrigues Filho
+// August @ 2020
+const char debugMSG[] = "[@HPAGateway]"
+
+const char END[] = "\r\n\r\n"
+const char EXECUTION_TIME = "execution_time"
+const char REGISTER = "register"
+
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, net.TCPSocket, 
+	net.TCPServerSocket, net.http.HTTPRequest request, data.StringUtil strUtil, time.Timer t {
+
+	dec execTime[] = null
+	int pointer = 0
+	Mutex lock = new Mutex()
+	//char URL[] = "localhost:8081/"
+	char URL[] = "34.66.16.155:8081/"
+	bool started = false
+
+	dec calculateAvg() {
+		mutex(lock) {
+			if (pointer == 0) {
+				out.println("------------------------")
+				out.println("0.0")
+				out.println("------------------------")
+				return 0.0
+			} else if (pointer > 0) {
+				dec helper = 0.0
+				for (int i = 0; i < pointer; i++) {
+					helper += execTime[i]		
+				}
+				dec avg = helper/pointer
+				out.println("------------------------")
+				out.println("$(du.decToString(avg))")
+				out.println("------------------------")
+				startExecTime()
+				return avg
+			} else {
+				out.println("$(debugMSG) Something went wrong!")
+			}
+		}
+		return 0.0
+	}
+
+	void send(dec avg) {
+		int avgInt = avg
+		char req[] = new char[](URL, iu.intToString(avgInt))
+		request.get(req, null)
+		out.println("$(debugMSG) Making request: $req")
+	}
+
+	void notifyHPA() {
+		while(true) {
+			t.sleep(60000)
+			dec avg = calculateAvg()
+			if (avg > 0.0) {
+				send(avg)
+			}
+		}
+	}
+
+	void registerResponse(dec time, int index) {
+		mutex(lock) {
+			execTime[index] = time
+		}
+		out.println("[$(iu.intToString(index))] $(du.decToString(time))")
+	}
+
+	void process(TCPSocket socket) {
+		char buf[] = null
+		char last4[] = new char[4]
+		while (last4 != "\r\n\r\n") {
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last4[0] = last4[1]
+			last4[1] = last4[2]
+			last4[2] = last4[3]
+			last4[3] = b[0]
+		}
+		String helper[] = strUtil.explode(buf, "|")
+		if (helper[0].string == REGISTER) {
+			socket.send(new char[]("register|", iu.intToString(pointer), END))
+			pointer++
+			if (!started) {
+				asynch::notifyHPA()
+				started = true
+			}
+			out.println("$(debugMSG) Registered to HPA.")
+		} else if (helper[0].string == EXECUTION_TIME) {
+			if (iu.intFromString(helper[1].string) == INT_MAX) {
+				registerResponse(0.0, 
+					iu.intFromString(helper[2].string))
+			} else {
+				registerResponse(du.decFromString(helper[1].string), 
+					iu.intFromString(helper[2].string))
+			}
+		}
+		socket.disconnect()
+	}
+
+	void startExecTime() {
+		execTime = new dec[100]
+		for (int i = 0; i < 100; i++) {
+			execTime[i] = 0.0
+		}
+	}
+
+	int App:main(AppParam params[]) {
+		startExecTime()
+		TCPServerSocket s = new TCPServerSocket()
+		if (!s.bind(TCPServerSocket.ANY_ADDRESS, 2006)) {
+			throw new Exception("Failed to bind master socket")
+		}
+		while (true) {
+			TCPSocket cs = new TCPSocket()
+			if (cs.accept(s)) { asynch::process(cs) }
+		}
+		return 0
+	}
+}

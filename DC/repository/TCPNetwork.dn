@@ -1,0 +1,96 @@
+const char debugMSG[] = "[@TCPNetwork]"
+const int LISTEN_PORT = 8080
+// list of params
+const char PORT_NUM[] = "port_num"
+const char HELP[]     = "help"
+
+data PathMapping {
+	char path[]
+	char file[]
+}
+
+data ParsedParam {
+	char type[]
+	char value[]
+	char raw[]
+}
+
+component provides App requires io.Output out, data.IntUtil intUtil, net.TCPSocket, 
+	net.TCPServerSocket, rh.RequestHandler rh {
+	int listenPort = 0
+
+	void help() {
+		out.println("Web Framework [version 100]")
+		out.println("\nUsage: dana ws.core")
+		out.println("\nOptions:")
+		out.println("-help      \t List commands that can be passed as parameter to the Web Framework core component.")
+		out.println("-p [number]\t Specify the port on which the server will be running.")
+	}
+
+	// add the alias mapping and do not forget to add composed args to the composedArg function
+	char[] getArg(char alias[]) {
+		if (alias == "-p") { return PORT_NUM }
+		else if (alias == "-help") { return HELP }
+		else { throw new Exception("$alias not a valid param.") }
+		return null
+	}
+
+	// verify if a param is composed, i.e. -p 232
+	bool composedArg(char arg[]) {
+		if (arg == PORT_NUM) { return true }
+		return false
+	}
+
+	ParsedParam[] parseParam(AppParam params[]) {
+		ParsedParam pParam[] = null
+		bool twoParts = false
+		for (int count = 0; count < params.arrayLength; count++) {
+			ParsedParam p
+			if (params[count].string[0] == "-") {
+				p = new ParsedParam()
+				p.type = getArg(params[count].string)
+				if (p.type == null) { return null }
+				if (composedArg(p.type)) {
+					p.value = params[count+1].string
+					if (p.value[0] == "-") { throw new Exception("$(params[count].string) requires a second argument.") }
+					p.raw = new char[](params[count].string, " ", params[count+1].string)
+					count++
+				} else { p.raw = params[count].string }
+				pParam = new ParsedParam[](pParam, p)
+			} else { out.println("Invalid param! For more information type: dana ws.core -help") }
+		}
+		return pParam
+	}
+
+	int processParams(AppParam params[]) {
+		if (params.arrayLength == 0) { return 1 }
+		if (params.arrayLength > 0) {
+			ParsedParam pParam[] = parseParam(params)
+			if (pParam == null) { return 0 }
+			for (int count = 0; count < pParam.arrayLength; count++) {
+				if (pParam[count].type == PORT_NUM) {
+					listenPort = intUtil.intFromString(pParam[count].value)
+				} else if (pParam[count].type == HELP) {
+					help()
+					return 0
+				} else { throw new Exception("$(pParam[count].raw) is not a valid param.") }
+			}
+		}
+		return 1
+	}
+
+	int App:main(AppParam params[]) {
+		listenPort = LISTEN_PORT
+		if (processParams(params) != 0) {
+			TCPServerSocket s = new TCPServerSocket()
+			if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort)) {
+				throw new Exception("Failed to bind master socket")
+			}
+			while (true) {
+				TCPSocket cs = new TCPSocket()
+				if (cs.accept(s)) { asynch::rh.processStream(cs) }
+			}
+		}
+		return 0
+	}
+}
