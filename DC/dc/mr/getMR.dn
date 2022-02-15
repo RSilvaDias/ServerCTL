@@ -40,8 +40,9 @@ component provides mr.getMR requires io.Output out,
 		mysql.close()
 	}
 
-	void getMR:gMR(char uuid[], DocStream stream) {
-		queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
+	void getMR:gMR(DocStream stream) {
+		out.println("$(debugMSG) Hello!!!")
+		//queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
 	}
 
 	// implementing chunked transfer protocol

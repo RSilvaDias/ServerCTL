@@ -1,3 +1,5 @@
+const char debugMSG[] 	= "[@mostRecentDataProxy]"
+
 data Param {
 	char value[]
 }
@@ -20,23 +22,11 @@ data IPAddr {
 	int port
 }
 
-data Int {
-	int i
-}
+const char gMR_FUNC[]   = "gMR"
+const char LOCALHOST[] 	= "localhost"
 
-/* Available list operations */
-const char ADD[]          = "add"
-const char GET_LENGTH[]   = "getLength"
-const char GET_CONTENTS[] = "getContents"
-const char CLEAR_LIST[]   = "clearList"
-
-/* IPs */
-const char LOCALHOST[] = "localhost"
-const char remoteone[] = "remotedist1"
-const char remotetwo[] = "remotedist2"
-
-component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEncoder parser,
-	net.TCPSocket, net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu,serverctl.Serverctl SCTL {
+component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, 
+	net.TCPSocket, net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu {
 
 	IPAddr remoteDistsIps[] = null
 	IPAddr remoteListsIps[] = null
@@ -47,11 +37,11 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 		if (remoteDistsIps == null) {
 			remoteDistsIps = new IPAddr[2]
 			remoteDistsIps[0] = new IPAddr()
-			remoteDistsIps[0].ip = new char[](remoteone)
-			remoteDistsIps[0].port = 5000
+			remoteDistsIps[0].ip = new char[](LOCALHOST)
+			remoteDistsIps[0].port = 8081
 			remoteDistsIps[1] = new IPAddr()
-			remoteDistsIps[1].ip = new char[](remotetwo)
-			remoteDistsIps[1].port = 5000
+			remoteDistsIps[1].ip = new char[](LOCALHOST)
+			remoteDistsIps[1].port = 8082
 		}
 	}
 
@@ -59,16 +49,16 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 		if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[2]
 			remoteListsIps[0] = new IPAddr()
-			remoteListsIps[0].ip = new char[](remoteone)
-			remoteListsIps[0].port = 5001
+			remoteListsIps[0].ip = new char[](LOCALHOST)
+			remoteListsIps[0].port = 2010
 			remoteListsIps[1] = new IPAddr()
-			remoteListsIps[1].ip = new char[](remotetwo)
-			remoteListsIps[1].port = 5001
+			remoteListsIps[1].ip = new char[](LOCALHOST)
+			remoteListsIps[1].port = 2011
 		}
 	}
 
 	void sendMsgToRemoteDists(char msg[]) {
-		//setupRemoteDistsIPs()               // Must disable when dynamic works
+		setupRemoteDistsIPs()
 		for (int i = 0; i < remoteDistsIps.arrayLength; i++) {
 			connectAndSend(remoteDistsIps[i], msg, true)
 		}
@@ -113,7 +103,7 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 
 	bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
 		if (!remoteObj.connect(addr.ip, addr.port)) {
-            out.println("Connection error!")
+			out.println("Connection error!")
 			return false
 		}
 		return true
@@ -131,7 +121,7 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 	}
 
 	Response makeRequest(char content[]) {
-		//setupRemoteListsIPs()           
+		setupRemoteListsIPs()
 		IPAddr addr = null
 		mutex(remoteListsIpsLock) {
 			if (remoteListsIps.arrayLength > 1) {
@@ -143,7 +133,7 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 		return connectAndSend(addr, content, true)
 	}
 
-	void List:add(Data item) {
+	/*void List:add(Data item) {
 		Request request = new Request()
 		request.functionName = ADD
 		request.numParams = 1
@@ -151,38 +141,6 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 		char param[] = parser.jsonFromData(item, null)
 		char content2[] = new char[](requestStr, "!", param, "\r\r\r\r")
 		makeRequest(content2)
-	}
-
-	void List:remove(Data item) {
-		// TODO
-	}
-
-	void List:update(Data item, Data newVersion) {
-		// TODO
-	}
-
-	Data List:getFirst() {
-		// TODO
-		return null
-	}
-
-	Data List:getNext() {
-		// TODO
-		return null
-	}
-
-	bool List:isEnd() {
-		// TODO
-		return false
-	}
-
-	Data List:getIndex(int ndx) {
-		// TODO
-		return null
-	}
-
-	void List:setIndex(int ndx, Data d) {
-		//TODO
 	}
 
 	int List:getLength() {
@@ -204,56 +162,36 @@ component provides List:heap(Destructor, AdaptEvents) requires data.json.JSONEnc
 		Response response = makeRequest(content2)
 		Int nums[] = parser.jsonToArray(response.value, typeof(Int[]), null)
 		return nums
-	}
+	}*/
 
-	void buildFromArray(Data items[]) {
-		// TODO
+	// THIS METHOD SHOULDN'T BE HEREEEEEEE --- THIS SHOULD BE IN A NEW COMPONENT
+	void getMR:storeData(byte content[], char uuid[], DocStream stream) {
+		//TODO
 	}
-
-	bool List:clone(Object o) {
-		// TODO
-		return false
-	}
-
-	void clearList() {
-		// TODO
-	}
-
-	void Destructor:destroy() {
+	
+	void getMR:gMR(DocStream stream) {
+		Request request = new Request()
+		request.functionName = gMR_FUNC
+		request.numParams = 0 // this should be changed
+		char requestStr[] = parser.jsonFromData(request, null)
+		char content2[] = new char[](requestStr, "!", " ", "\r\r\r\r")
+		Response response = makeRequest(content2)
+		//return iu.intFromString(response.value)
 	}
 
 	void AdaptEvents:inactive() {
-		if (content != null) {
+		// YOU WONT NEED THISSSSS
+		/*if (content != null) {
 			content = getContents()
 			char msg[] = new char[]("clearList!\r\r\r\r")
 			sendMsgToRemoteDists(msg)
-		}
+		}*/
 	}
 
-	
+	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
-        int quantity = SCTL.get_quantity()
-        int final = SCTL.get_final()
-        remoteDistsIps = new IPAddr[final]
-        remoteListsIps = new IPAddr[final]
-        int i = final - quantity
-        int number = i+1
-        char name[] = "remotedist"
-        for (i = final - quantity ; i < final ; i++){
-            char finalname[] = "$name$number"
-            remoteDistsIps[i] = new IPAddr()
-            remoteDistsIps[i].ip = new char[](finalname)
-			remoteDistsIps[i].port = 5000
-            remoteListsIps[i] = new IPAddr()
-			remoteListsIps[i].ip = new char[](finalname)
-			remoteListsIps[i].port = 5001
-            number++
-        }
-
-        if (content != null) {
-			char state[] = parser.jsonFromArray(content, null)
-			char msg[] = new char[]("../distributor/RemoteList.o!", state, "\r\r\r\r")
-			sendMsgToRemoteDists(msg)
-		}
+		char msg[] = new char[]("../distributor/RemoteMR.o!", "\r\r\r\r")
+		sendMsgToRemoteDists(msg)
 	}
+
 }

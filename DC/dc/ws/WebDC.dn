@@ -5,8 +5,7 @@
  * Author: Roberto Rodrigues Filho - Sept @ 2018
  * Changed: Roberto Rodrigues Filho - Jun @ 2020
  */
-component provides ws.Web:nfrp requires io.Output out, data.StringUtil strUtil,
-	data_collector.DataCollectorManager dataCollectorManager, mrr.getMRR gmrr , hdr.getHDR ghdr, hd.getHD ghd , mr.getMR gmr {
+component provides ws.Web:nfrp requires io.Output out, data.StringUtil strUtil, mrr.getMRR gmrr , hdr.getHDR ghdr, hd.getHD ghd , mr.getMR gmr {
 
 	bool match(char path[], char expr[]) {
 		String helper[] = strUtil.explode(path, "?")
@@ -50,7 +49,7 @@ component provides ws.Web:nfrp requires io.Output out, data.StringUtil strUtil,
 		char id[] = idStr.string
 		// handling requests
 		if (match(path, "/collector/store/*")) {
-			dataCollectorManager.storeData(content, id, stream)
+			//dataCollectorManager.storeData(content, id, stream)
 		} else { failed(stream) }
 		return true
 	}

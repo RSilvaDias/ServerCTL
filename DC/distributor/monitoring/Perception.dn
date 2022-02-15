@@ -39,7 +39,8 @@ component provides monitoring.Perception requires io.Output out, data.IntUtil iu
 		if (verbose) { out.println("$(debugMSG) Proxy set up procedure started!") }
 		// TODO: generate proxy code 
 		if (verbose) { /*out.println("$(debugMSG) 1. Proxy code generation...")*/ }
-		availableProxies = new String[](availableProxies, new String("../distributor/monitoring/proxies/ServerProxy.o"))
+		//availableProxies = new String[](availableProxies, new String("../distributor/monitoring/proxies/ServerProxy.o"))
+			availableProxies = null
 		if (verbose) { /*out.println("$(debugMSG) -> Proxy code generation done.")*/ }
 		// TODO: compile proxy code 
 		if (verbose) { /*out.println("$(debugMSG) 2. Proxy compilation...")*/ }

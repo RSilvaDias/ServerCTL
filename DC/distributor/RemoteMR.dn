@@ -1,6 +1,6 @@
-const int DEFAULT_PORT = 5001
+const int DEFAULT_PORT = 2010
 
-component provides App requires io.Output out, data.IntUtil iu, proxy.DistProxy list {
+component provides App requires io.Output out, data.IntUtil iu, proxy.DistProxy mr {
 
 	int port = 0
 
@@ -12,7 +12,7 @@ component provides App requires io.Output out, data.IntUtil iu, proxy.DistProxy 
 			port = DEFAULT_PORT
 		}
 
-		list.start(port)
+		mr.start(port)
 
 		return 0
 	}

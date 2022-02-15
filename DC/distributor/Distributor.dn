@@ -2,12 +2,10 @@ const char debugMSG[]	  = "[@Distributor]"
 
 const char HELP[]       = "help"
 const char CREATE[]     = "create"
-const char ALTERNATE[]  = "alternate"
-const char PROPAGATE[]  = "propagate"
-const char SHARDING[]   = "sharding"
 const char LOCAL[]      = "local"
 const char PERCEPTION[] = "perception"
 const char TEST[]		= "test"
+const char MR[]			= "mr"
 const char EXIT[]       = "exit"
 
 
@@ -22,24 +20,20 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void help() {
 		out.println("Command list:")
 		out.println(" $(HELP) - to list all commands")
-        out.println(" $(CREATE) - to create pods")
-		out.println(" $(ALTERNATE) - to distribute list alternating requests between replicas")
-		out.println(" $(PROPAGATE) - to distribute list propagating write requests to all replicas")
-		out.println(" $(SHARDING) - to distribute list with sharding")
+        //out.println(" $(CREATE) - to create pods")
+		out.println(" $(MR) - to distribute getMR")
 		out.println(" $(LOCAL) - to bring list locally")
-		out.println(" $(PERCEPTION) - to get perception data from the current running composition")
+		//out.println(" $(PERCEPTION) - to get perception data from the current running composition")
 		out.println(" $(EXIT) - to finish execution")
 	}
 
 	void local() {
-        
 		perception.setConfig(localConfigs[0].string) 
 		out.println("$(debugMSG) Local composition running.")
 	}
 
 	void distribute(char proxyInterface[]) {
-     
-        char remoteConfig[] = getRemoteConfig("data/adt/$(proxyInterface)")
+        char remoteConfig[] = getRemoteConfig("$(proxyInterface)")
 		if (remoteConfig != null) {	
 			perception.setConfig(remoteConfig)
 			out.println("$(debugMSG) Remote composition [($proxyInterface)] running.")	
@@ -49,8 +43,6 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	}
 
 	void perception() {
-		//char jsonPD[] = perception.getPerceptionData()
-		//out.println("$(debugMSG) $(jsonPD)")
 		PerceptionData pD[] = encoder.jsonToArray(perception.getPerceptionData(), typeof(PerceptionData[]), null)
 		for (int i = 0; i < pD.arrayLength; i++) {
 			for (int cMetrics = 0; cMetrics < pD[i].metrics.arrayLength; cMetrics++) {
@@ -90,14 +82,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
         if (cmdList.arrayLength == 1) {
 			if (cmd == HELP) {
 				help()
-			} else if (cmd == PROPAGATE) {
-				distribute("ListCPPropagate.o")
-			} else if (cmd == ALTERNATE) {
-                distribute("ListCPAlternate.o")
-			} else if (cmd == SHARDING) {
-				distribute("ListCPSharding.o")
-			} else if (cmd == LOCAL) {
-				local()
+			/*
 			} else if (cmd == PERCEPTION) {
 				perception()
 			} else if (cmd == TEST) {
@@ -111,6 +96,11 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 				distribute("ListCPSharding.o")
 				observationLoop(10, 1000)
 				out.println("$(debugMSG) Test finished!")
+			*/
+			} else if (cmd == LOCAL) {
+				local()
+			} else if (cmd == MR) {
+				distribute("mr/getMRProxy.o")
 			} else {
 				out.println("Invalid command.")
 			}
@@ -153,9 +143,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void loadDistributedProxies() {
 		if (distributedProxies == null) {
 			distributedProxies = new String[](
-				new String("ListCPPropagate.o"),
-				new String("ListCPAlternate.o"),
-				new String("ListCPSharding.o"))
+				new String("getMRProxy.o"))
 		}
 	}
 
@@ -163,7 +151,6 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		perception = new Perception(true)
 		/* Loading target system and adding a monitoring proxy to it */
 		perception.setMain("../repository/TCPNetwork.o", null)
-		perception.addProxy("|../pal/monitoring/proxies/DCProxy.o|*(*:hh.HTTPHandler[0]:*)|")
 		
         String configs[] = perception.getAllConfigs()
 		for (int i = 0; i < configs.arrayLength; i++) {

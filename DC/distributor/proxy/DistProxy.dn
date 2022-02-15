@@ -15,22 +15,18 @@ data Response {
 	char value[]
 }
 
-data Int {
-	int i
-}
 
 /* Available list operations */
-const char ADD[]          = "add"
-const char GET_LENGTH[]   = "getLength"
-const char GET_CONTENTS[] = "getContents"
+const char gMR_FUNC[]   = "gMR"
+
 
 component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.TCPSocket,
-	net.TCPServerSocket, data.adt.List:heap list, data.json.JSONEncoder parser, data.StringUtil strUtil  {
+	net.TCPServerSocket, mr.getMR getmr, data.json.JSONEncoder parser, data.StringUtil strUtil  {
 
 	bool serviceStatus
 	TCPServerSocket host
 
-	Response addRequest(Request request) {
+	/*Response addRequest(Request request) {
 		Response response = new Response()
 
 		Int item = parser.jsonToData(request.params[0].value, typeof(Int), null)
@@ -63,18 +59,21 @@ component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.
 		response.value = parser.jsonFromArray(result, null)
 
 		return response
+	}*/
+
+	Response gMR(Request request) {
+		Response response = new Response()
+		//Int item = parser.jsonToData(request.params[0].value, typeof(Int), null)
+		//list.add(item)
+		getmr.gMR(null) // THIS IS WHERE THE REVERSE PROXY SHOULD KICK IN
+		response.status = 1
+		response.value = ""
+		return response
 	}
 
 	Response interpretRequest(Request request) {
-		if (request.functionName == ADD) {
-			return addRequest(request)
-
-		} else if (request.functionName == GET_LENGTH) {
-			return getLengthRequest(request)
-
-		} else if (request.functionName == GET_CONTENTS) {
-			return getContentsRequest(request)
-
+		if (request.functionName == gMR_FUNC) {
+			return gMR(request)
 		} else {
 			Response response = new Response()
 			response.status = 2
