@@ -1,0 +1,95 @@
+/* NFRPCache.dn 
+ *
+ * Please note:
+ * - This component uses a cache component that is not thread safe
+ * - Because cache is not thread safe, this component adds a global lock to cache
+ *
+ * Author: Roberto Rodrigues Filho - Sept @ 2018
+ */
+component provides ws.Web, Service requires io.Output out, ws.Web:nfrp web, 
+	interceptor.DSInterceptor, cache.Cache cache, data.StringUtil strUtil, data.IntUtil iu {
+
+	implementation Service {
+		void Service:start() {
+			cache.deleteAll()
+		}
+		void Service:stop() {
+			cache.deleteAll()
+		}
+	}
+
+	implementation Web {
+		Mutex cacheLock = new Mutex()
+
+		bool isCachable(Header header[]) {
+			for (int i = 0; i < header.arrayLength; i++) {
+				if (strUtil.lowercase(header[i].key) == strUtil.lowercase("Cache-Control")) {
+					if (strUtil.lowercase(header[i].value) == strUtil.lowercase("no-cache")) {
+						return false
+					}
+				}
+			}
+			return true
+		}
+
+		int getMaxAge(Header header[]) {
+			for (int i = 0; i < header.arrayLength; i++) {
+				if (strUtil.lowercase(header[i].key) == strUtil.lowercase("Cache-Control")) {
+					String helper[] = strUtil.explode(header[i].value, "=")
+					if (strUtil.lowercase(helper[0].string) == strUtil.lowercase("max-age")) {
+						return iu.intFromString(helper[1].string)
+					}
+				}
+			}
+			return 0
+		}
+
+		bool Web:get(char path[], DocStream stream, HashTable params) {
+			bool result = false
+			if (!isCachable(stream.getRequestHeaders())) {
+				// works as NFRProxy
+				DSInterceptor interceptor = new DSInterceptor(null, null, null)
+				interceptor.set(stream)
+				result = web.get(path, interceptor, params)
+				if ((result) && (interceptor.get() != null)) {
+					stream.write(interceptor.get())
+				}
+			} else {
+				mutex (cacheLock) {
+					byte response[] = cache.get(path)
+					if (response != null) {
+						stream.write(response)
+						return true
+					}
+					int maxAge = getMaxAge(stream.getRequestHeaders())// in seconds
+					DSInterceptor interceptor = new DSInterceptor(null, null, null)
+					interceptor.set(stream)
+					result = web.get(path, interceptor, params)
+					//cache only if result is true
+					if ((result) && (interceptor.get() != null)) {
+						stream.write(interceptor.get())
+						cache.insert(path, interceptor.get(), maxAge)
+					}
+				}
+			}
+			return result
+		}
+
+		bool Web:post(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+			mutex (cacheLock) { cache.deleteAll() }
+			return web.post(path, contentType, content, stream, params)
+		}
+
+		bool Web:put(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+			return false
+		}
+
+		bool Web:delete(char path[], char contentType[], byte content[], DocStream stream, HashTable params) {
+			return false
+		}
+
+		String[] Web:getURLPatterns() {
+			return web.getURLPatterns()
+		}	
+	}
+}

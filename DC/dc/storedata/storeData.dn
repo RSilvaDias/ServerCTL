@@ -11,9 +11,9 @@
  * Author: Marcio P Sa - May @ 2018
  * Changes: Roberto Rodrigues Filho - Sept @ 2018
  */
-const char debugMSG[] = "[@historical_data]"
+const char debugMSG[] = "[@storeData]"
 
-component provides hd.getHD requires io.Output out,
+component provides storedata.storeData requires io.Output out,
 	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
 
 	static ConfigFile configFile = null
@@ -31,9 +31,13 @@ component provides hd.getHD requires io.Output out,
 		return mysql
 	}
 
-	// "/collector/resources/data" Get historical data of sensor capabilities of all city resources
-	void getHD:gHD(DocStream stream) {
-		queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)
+	// NOTE: This is a problem for the NFRProxy
+	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
+	void storeData:sData(byte content[], char id[], DocStream s) {
+		MySQL mysql = getMySQL()
+		mysql.execute(new char[]("INSERT INTO data (value, uuid) VALUES (\"", codifier.encode(content)
+			,"\", \"", id ,"\");"))
+		mysql.close()
 	}
 
 	// implementing chunked transfer protocol

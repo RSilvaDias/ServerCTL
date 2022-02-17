@@ -13,7 +13,7 @@ data Response {
 	char value[]
 }
 
-interface getMR {
+interface storeData {
 
-    void gMR(DocStream stream)
+    void sData(byte content[], char uuid[], DocStream stream)
 }
