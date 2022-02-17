@@ -1,4 +1,4 @@
-const char debugMSG[] 	= "[@mostRecentDataProxy]"
+const char debugMSG[] 	= "[@mostHistoricalDataResourcesProxy]"
 
 data Param {
 	char value[]
@@ -22,10 +22,10 @@ data IPAddr {
 	int port
 }
 
-const char gMR_FUNC[]   = "gMR"
+const char gHDR_FUNC[]   = "gHDR"
 const char LOCALHOST[] 	= "localhost"
 
-component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, 
+component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parser, 
 	net.TCPSocket, net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu {
 
 	IPAddr remoteDistsIps[] = null
@@ -133,28 +133,22 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		return connectAndSend(addr, content, true)
 	}
 	
-	void getMR:gMR(DocStream stream) {
+	void getHDR:gHDR(char uuid[], DocStream stream) {
 		Request request = new Request()
-		request.functionName = gMR_FUNC
+		request.functionName = gHDR_FUNC
 		request.numParams = 0 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
 		char content2[] = new char[](requestStr, "!", " ", "\r\r\r\r")
 		Response response = makeRequest(content2)
-		//return iu.intFromString(response.value)
 	}
 
 	void AdaptEvents:inactive() {
-		// YOU WONT NEED THISSSSS
-		/*if (content != null) {
-			content = getContents()
-			char msg[] = new char[]("clearList!\r\r\r\r")
-			sendMsgToRemoteDists(msg)
-		}*/
+		// not needed
 	}
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
-		char msg[] = new char[]("../distributor/RemoteMR.o!", "\r\r\r\r")
+		char msg[] = new char[]("../distributor/RemoteHD.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 	}
 

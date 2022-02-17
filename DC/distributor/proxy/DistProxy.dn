@@ -17,7 +17,11 @@ data Response {
 
 
 /* Available list operations */
+const char gHD_FUNC[]   = "gHD"
+const char gHDR_FUNC[]  = "gHDR"
 const char gMR_FUNC[]   = "gMR"
+const char gMRR_FUNC[]  = "gMRR"
+const char sDATA_FUNC[] = "storeData"
 
 
 component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.TCPSocket,
@@ -26,45 +30,9 @@ component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.
 	bool serviceStatus
 	TCPServerSocket host
 
-	/*Response addRequest(Request request) {
-		Response response = new Response()
-
-		Int item = parser.jsonToData(request.params[0].value, typeof(Int), null)
-		list.add(item)
-
-		response.status = 1
-		response.value = ""
-
-		return response
-	}
-
-	Response getLengthRequest(Request request) {
-		Response response = new Response()
-
-		response.status = 1
-		response.value = new char[](iu.intToString(list.getLength()))
-
-		return response
-	}
-
-	Response getContentsRequest(Request request) {
-		Response response = new Response()
-
-		Data nums[] = list.getContents()
-		Int result[] = new Int[nums.arrayLength]
-		for (int i = 0; i < nums.arrayLength; i++) {
-			result[i] = nums[i]
-		}
-		response.status = 3
-		response.value = parser.jsonFromArray(result, null)
-
-		return response
-	}*/
-
+	
 	Response gMR(Request request) {
 		Response response = new Response()
-		//Int item = parser.jsonToData(request.params[0].value, typeof(Int), null)
-		//list.add(item)
 		getmr.gMR(null) // THIS IS WHERE THE REVERSE PROXY SHOULD KICK IN
 		response.status = 1
 		response.value = ""
