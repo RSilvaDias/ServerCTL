@@ -70,7 +70,15 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 		String helper[] = strUtil.explode(command, "!")
 		if (helper[0].string == "../distributor/RemoteMR.o") {
 			startRemoteProcess(helper[0].string)
-		} else {
+        }else if (helper[0].string == "../distributor/RemoteMRR.o") {
+			startRemoteProcess(helper[0].string)
+		}else if (helper[0].string == "../distributor/RemoteHD.o") {
+			startRemoteProcess(helper[0].string)
+        }else if (helper[0].string == "../distributor/RemoteHDR.o") {
+			startRemoteProcess(helper[0].string)
+        }else if (helper[0].string == "../distributor/RemoteSData.o") {
+			startRemoteProcess(helper[0].string)
+        } else {
 			//clearState()
 		}
 		client.send("OK")
