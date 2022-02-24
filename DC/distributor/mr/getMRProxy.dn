@@ -25,13 +25,19 @@ data IPAddr {
 const char gMR_FUNC[]   = "gMR"
 const char LOCALHOST[] 	= "localhost"
 
-component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, 
-	net.TCPSocket, net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu {
+component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, net.TCPSocket,
+	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu, 
+	proxy.DocStreamRP dcRp {
 
 	IPAddr remoteDistsIps[] = null
 	IPAddr remoteListsIps[] = null
 	Mutex remoteListsIpsLock = new Mutex()
+	Mutex idLock = new Mutex()
+	bool flagDocStream = true
+	TCPServerSocket sDocStream = null
+
 	int pointer = 0
+	int id = 0
 
 	void setupRemoteDistsIPs() {
 		if (remoteDistsIps == null) {
@@ -132,30 +138,62 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		}
 		return connectAndSend(addr, content, true)
 	}
+
+	// THIS METHOD SHOULDN'T BE HEREEEEEEE --- THIS SHOULD BE IN A NEW COMPONENT
+	void getMR:storeData(byte content[], char uuid[], DocStream stream) {
+		//TODO
+	}
+
+	char[] idGenerator() {
+		/*int genId = 0
+		mutex(idLock) {
+			genId = iu.makeString(++id)
+		}
+		return genId*/
+		mutex(idLock) {
+			id++
+			return iu.makeString(id)
+		}
+	}
 	
 	void getMR:gMR(DocStream stream) {
 		Request request = new Request()
 		request.functionName = gMR_FUNC
-		request.numParams = 0 // this should be changed
+		request.numParams = 3 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
-		char content2[] = new char[](requestStr, "!", " ", "\r\r\r\r")
+		char idGen[] = idGenerator()
+		dcRp.associate(stream, idGen)
+		//TODO think about this msg format
+		char content2[] = new char[](requestStr, "!", "localhost!5011!", idGen, "\r\r\r\r")
 		Response response = makeRequest(content2)
-		//return iu.intFromString(response.value)
 	}
 
 	void AdaptEvents:inactive() {
-		// YOU WONT NEED THISSSSS
-		/*if (content != null) {
-			content = getContents()
-			char msg[] = new char[]("clearList!\r\r\r\r")
-			sendMsgToRemoteDists(msg)
-		}*/
+		flagDocStream = false
+		if (sDocStream != null) {
+			sDocStream.unbind()	
+		}
+	}
+
+	void createDocStreamSocket() {
+		sDocStream = new TCPServerSocket()
+		if (!sDocStream.bind(TCPServerSocket.ANY_ADDRESS, 5011)) {
+			throw new Exception("Failed to bind master socket")
+		}
+		while (flagDocStream) {
+			TCPSocket cs = new TCPSocket()
+			if (cs.accept(sDocStream)) { 
+				asynch::dcRp.processDocStream(cs)
+			}
+		}
 	}
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
 		char msg[] = new char[]("../distributor/RemoteMR.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
+		// server
+		asynch::createDocStreamSocket() 
 	}
 
 }

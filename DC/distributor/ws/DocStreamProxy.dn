@@ -1,0 +1,140 @@
+data Param {
+	char value[]
+}
+
+data Request {
+	char functionName[]
+	int numParams
+	Param params[]
+}
+
+data Response {
+	// 1 OK - 2 FAILED
+	byte status
+	// if it's null or "" this has to be translated to null
+	char value[]
+}
+
+data IPAddr {
+	char ip[]
+	int port
+}
+
+/* Available list operations */
+const char writeFNC[]   = "write"
+
+
+// second type of proxy -- the one that gets "sent" over the network -- this proxy does not work as
+// the other proxy.
+component provides ws.DocStreamProxy requires data.json.JSONEncoder parser, net.TCPSocket, 
+	data.StringUtil strUtil, io.Output out, data.IntUtil iu, ws.DocStream {
+	
+	IPAddr addr = null
+	char idGen[] = null
+
+	DocStreamProxy:DocStreamProxy(char ip[], int port, char id[]) {
+		super(null, null, null)
+		addr = new IPAddr(ip, port)
+		idGen = id
+	}
+
+	//DocStreamProxy:DocStream(TCPSocket s, Header headers[], Header responseHeaders[]) {
+
+	//}
+	
+	Header[] DocStreamProxy:getRequestHeaders() {
+		return null
+	}
+	
+	
+	void DocStreamProxy:setSessionKey(char key[], char value[]) {
+
+	}
+	
+	
+	char[] DocStreamProxy:getSessionKey(char key[]) {
+		return null
+	}
+	
+	void remSessionKey(char key[]) {
+
+	}
+	
+	void DocStreamProxy:write(char str[]) {
+		Request request = new Request()
+		request.functionName = writeFNC
+		request.numParams = 2
+		char requestStr[] = parser.jsonFromData(request, null)
+		char content[] = new char[](requestStr, "!", str, "!", idGen, "\r\r\r\r")
+		Response response = makeRequest(content)		
+	}
+	
+	void DocStreamProxy:writeStatus(int code, char reason[], Header headers[]) {
+
+	}
+
+	void DocStreamProxy:endStream() {
+
+	}
+
+	Response makeRequest(char content[]) {
+		return connectAndSend(content, true)
+	}
+
+	Response connectAndSend(char content[], bool readResponse) {
+		TCPSocket remoteObj = new TCPSocket()
+		Response resp = null
+		if (establishConnection(remoteObj)) {
+			remoteObj.send(content)
+			if (readResponse) { resp = readResponse(remoteObj) }
+			remoteObj.disconnect()
+		}
+		return resp
+	}
+
+	bool establishConnection(TCPSocket remoteObj) {
+		if (!remoteObj.connect(addr.ip, addr.port)) {
+			out.println("Connection error!")
+			return false
+		}
+		return true
+	}
+
+	Response readResponse(TCPSocket s) {
+		Response response = null
+		char buf[] = null
+		int len = 0
+		char command[] = null
+		while ((buf = s.recv(1)).arrayLength > 0) {
+			command = new char[](command, buf)
+			len++
+			//stop condition
+			if (len >= 4) {
+				if ((command[len-4] == "\r") && (command[len-3] == "\r") &&
+					(command[len-2] == "\r") && (command[len-1] == "\r")) {
+					response = parseResponse(strUtil.subString(command,
+						0, command.arrayLength-4))
+					break
+				}
+			}
+		}
+		if (response == null) { s.disconnect() }
+		return response
+	}
+
+	Response parseResponse(char content[]) {
+		String helper[] = strUtil.explode(content, "!")
+		Response response
+		if (helper.arrayLength > 1) {
+			response = parser.jsonToData(helper[0].string, typeof(Response), null)
+			Response response2 = new Response()
+			response2.value = helper[1].string
+			response2.status = response.status
+			response = response2
+		} else {
+			response = parser.jsonToData(content, typeof(Response), null)
+		}
+		return response
+	}
+	
+}

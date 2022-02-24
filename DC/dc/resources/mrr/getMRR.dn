@@ -9,5 +9,6 @@ uses ws.DocStream
 
 interface getMRR {
 
+  void storeData(byte content[], char uuid[], DocStream stream)
 	void gMRR(char uuid[], DocStream stream)
 }

@@ -31,6 +31,15 @@ component provides hd.getHD requires io.Output out,
 		return mysql
 	}
 
+	// NOTE: This is a problem for the NFRProxy
+	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
+	void getHD:storeData(byte content[], char id[], DocStream s) {
+		MySQL mysql = getMySQL()
+		mysql.execute(new char[]("INSERT INTO data (value, uuid) VALUES (\"", codifier.encode(content)
+			,"\", \"", id ,"\");"))
+		mysql.close()
+	}
+
 	// "/collector/resources/data" Get historical data of sensor capabilities of all city resources
 	void getHD:gHD(DocStream stream) {
 		queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)

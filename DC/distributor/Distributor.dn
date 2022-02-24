@@ -1,12 +1,11 @@
 const char debugMSG[]	  = "[@Distributor]"
 
 const char HELP[]       = "help"
+const char CREATE[]     = "create"
 const char LOCAL[]      = "local"
-const char HD[]         = "hd"
-const char HDR[]        = "hdr"
+const char PERCEPTION[] = "perception"
+const char TEST[]		= "test"
 const char MR[]			= "mr"
-const char MRR[]        = "mrr"
-const char SDATA[]      = "sdata"
 const char EXIT[]       = "exit"
 
 
@@ -21,12 +20,10 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void help() {
 		out.println("Command list:")
 		out.println(" $(HELP) - to list all commands")
-		out.println(" $(HD) - to distribute getHD")
-		out.println(" $(HDR) - to distribute getHDR")
+        //out.println(" $(CREATE) - to create pods")
 		out.println(" $(MR) - to distribute getMR")
-		out.println(" $(MRR) - to distribute getMRR")
-        out.println(" $(SDATA) - to distribute storeData")
 		out.println(" $(LOCAL) - to bring list locally")
+		//out.println(" $(PERCEPTION) - to get perception data from the current running composition")
 		out.println(" $(EXIT) - to finish execution")
 	}
 
@@ -85,18 +82,25 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
         if (cmdList.arrayLength == 1) {
 			if (cmd == HELP) {
 				help()
+			/*
+			} else if (cmd == PERCEPTION) {
+				perception()
+			} else if (cmd == TEST) {
+				out.println("$(debugMSG) Starting test...")
+				local()
+				observationLoop(10, 1000)
+				distribute("ListCPPropagate.o")
+				observationLoop(10, 1000)
+				distribute("ListCPAlternate.o")
+				observationLoop(10, 1000)
+				distribute("ListCPSharding.o")
+				observationLoop(10, 1000)
+				out.println("$(debugMSG) Test finished!")
+			*/
 			} else if (cmd == LOCAL) {
 				local()
-            } else if (cmd == HD) {
-                distribute("hd/getHDProxy.o")
-            } else if (cmd == HDR) {
-                distribute("hdr/getHDRProxy.o")
-            } else if (cmd == MR) {
+			} else if (cmd == MR) {
 				distribute("mr/getMRProxy.o")
-            } else if (cmd == MRR) {
-                distribute("mrr/getMRRProxy.o")
-            } else if (cmd == SDATA) {
-                distribute("storedata/storeDataProxy.o")
 			} else {
 				out.println("Invalid command.")
 			}
@@ -139,11 +143,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void loadDistributedProxies() {
 		if (distributedProxies == null) {
 			distributedProxies = new String[](
-				new String("getHDProxy.o"),
-                new String("getHDRProxy.o"),
-                new String("getMRProxy.o"),
-                new String("getMRRProxy.o"),
-                new String("storeDataProxy.o"))
+				new String("getMRProxy.o"))
 		}
 	}
 

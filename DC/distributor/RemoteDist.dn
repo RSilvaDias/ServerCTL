@@ -1,9 +1,5 @@
 uses data.adt.List
 
-data Int {
-	int i
-}
-
 const char debugMSG[] = "[@RemoteDist]"
 const int DEFAULT_DIST_PORT = 8081
 const int DEFAULT_APP_PORT  = 2010
@@ -25,17 +21,14 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 			params[0].string = iu.intToString(portApp)
 			assembly.setMain(remoteP, params)
 			assembly.removeComp(new String[](
-				new String("./../dc/hdr/getHD.o"),
-				new String("./../dc/hd/getHDR.o"),
-				new String("./../dc/mr/getMR.o"),
-                new String("./../dc/mr/getMRR.o"),
-                new String("./../dc/storedata/storeData.o")))
+				new String("./mr/getMRProxy.o")))
 			out.println("$(debugMSG) Remote Component $(remoteP) Started! ")
 			running = true
 			remote = assembly.getCompsByProvidedInterface("proxy.DistProxy")
 		}
 		if ((remote == null) || (remote.arrayLength > 1)) { throw new Exception("Something went wrong!") }
 		else {
+			// THIS IS FOR INSERTING STATE INTO THE REMOTE COMPONENT
 
 			// parsing state to Data
 			//Int content[] = encoder.jsonToArray(state, typeof(Int[]), null)
@@ -46,9 +39,19 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 				list.add(content[i])
 			}
 			out.println("$(debugMSG) State inserted!")*/
-    
 		}
 	}
+
+	// TODO: need to pause component, wait for object to finish processing
+	// any threads it is currently running, etc.
+	//void clearState() {
+		// adding content to list in the object
+	//	Object objects[] = remote[0].class.getObjects("data.adt.List:heap")
+	//	List list = objects[0]
+	//	while (list.getLength() > 0) {
+	//		list.remove(list.getFirst())
+	//	}
+	//}
 
 	void handleRequest(TCPSocket client) {
 		// reading data from socket -- this could be optimised
@@ -66,19 +69,11 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 				}
 			}
 		}
-        // processing command
+		// processing command
 		String helper[] = strUtil.explode(command, "!")
 		if (helper[0].string == "../distributor/RemoteMR.o") {
 			startRemoteProcess(helper[0].string)
-        }else if (helper[0].string == "../distributor/RemoteMRR.o") {
-			startRemoteProcess(helper[0].string)
-		}else if (helper[0].string == "../distributor/RemoteHD.o") {
-			startRemoteProcess(helper[0].string)
-        }else if (helper[0].string == "../distributor/RemoteHDR.o") {
-			startRemoteProcess(helper[0].string)
-        }else if (helper[0].string == "../distributor/RemoteSData.o") {
-			startRemoteProcess(helper[0].string)
-        } else {
+		} else {
 			//clearState()
 		}
 		client.send("OK")
@@ -94,8 +89,10 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 			portApp = DEFAULT_APP_PORT
 		}
 
+		// instantiating variables
 		TCPServerSocket host = new TCPServerSocket()
 
+		// binding server socket
 		if (!host.bind(TCPServerSocket.ANY_ADDRESS, portDist)) {
 			out.println("Error: failed to bind master socket")
 			return 1
