@@ -143,7 +143,10 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void loadDistributedProxies() {
 		if (distributedProxies == null) {
 			distributedProxies = new String[](
-				new String("getMRProxy.o"))
+				new String("getMRProxy.o"),
+				new String("getHDProxy.o"),
+				new String("getHDRProxy.o"),
+				new String("getMRRProxy.o"))
 		}
 	}
 
