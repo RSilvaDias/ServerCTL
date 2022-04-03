@@ -8,7 +8,5 @@ uses ws.DocStream
 
 
 interface getHDR {
-
-  //void storeData(byte content[], char uuid[], DocStream stream)
-	void gHDR(char uuid[], DocStream stream)
+  void gHDR(char uuid[], DocStream stream)
 }

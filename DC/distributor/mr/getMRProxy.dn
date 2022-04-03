@@ -26,7 +26,7 @@ const char gMR_FUNC[]   = "gMR"
 const char LOCALHOST[] 	= "localhost"
 
 component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, net.TCPSocket,
-	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu, 
+	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu,
 	proxy.DocStreamRP dcRp {
 
 	IPAddr remoteDistsIps[] = null
@@ -139,11 +139,6 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		return connectAndSend(addr, content, true)
 	}
 
-	// THIS METHOD SHOULDN'T BE HEREEEEEEE --- THIS SHOULD BE IN A NEW COMPONENT
-	void getMR:storeData(byte content[], char uuid[], DocStream stream) {
-		//TODO
-	}
-
 	char[] idGenerator() {
 		/*int genId = 0
 		mutex(idLock) {
@@ -155,7 +150,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 			return iu.makeString(id)
 		}
 	}
-	
+
 	void getMR:gMR(DocStream stream) {
 		Request request = new Request()
 		request.functionName = gMR_FUNC
@@ -171,7 +166,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 	void AdaptEvents:inactive() {
 		flagDocStream = false
 		if (sDocStream != null) {
-			sDocStream.unbind()	
+			sDocStream.unbind()
 		}
 	}
 
@@ -182,7 +177,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		}
 		while (flagDocStream) {
 			TCPSocket cs = new TCPSocket()
-			if (cs.accept(sDocStream)) { 
+			if (cs.accept(sDocStream)) {
 				asynch::dcRp.processDocStream(cs)
 			}
 		}
@@ -190,10 +185,11 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
+		out.println("ENTRANDO AQUI - MR")
 		char msg[] = new char[]("../distributor/RemoteMR.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 		// server
-		asynch::createDocStreamSocket() 
+		asynch::createDocStreamSocket()
 	}
 
 }

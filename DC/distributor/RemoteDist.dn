@@ -13,7 +13,7 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 	int portApp				= 0
 	bool running 			= false
 
-	void startRemoteProcess(char remoteP[]) {
+	void startRemoteProcess(char remoteP[],char nameP[]) {
 		// load and start relocated component
 		if (!running) {
 			AppParam params[] = new AppParam[1]
@@ -21,37 +21,27 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 			params[0].string = iu.intToString(portApp)
 			assembly.setMain(remoteP, params)
 			assembly.removeComp(new String[](
-				new String("./mr/getMRProxy.o")))
+				new String("./mr/getMRProxy.o"),
+				new String("./mrr/getMRRProxy.o"),
+				new String("./hd/getHDProxy.o"),
+				new String("./hdr/getHDRProxy.o")))
 			out.println("$(debugMSG) Remote Component $(remoteP) Started! ")
 			running = true
-			remote = assembly.getCompsByProvidedInterface("proxy.DistProxy")
+			if (nameP == "mr"){
+				remote = assembly.getCompsByProvidedInterface("proxy.DistProxy")
+			}	else if (nameP == "mrr"){
+				remote = assembly.getCompsByProvidedInterface("proxy.DistProxyMRR")
+			}	else if (nameP == "hd"){
+				remote = assembly.getCompsByProvidedInterface("proxy.DistProxyHD")
+			}	else if (nameP == "hdr"){
+				remote = assembly.getCompsByProvidedInterface("proxy.DistProxyHDR")
+			}
 		}
 		if ((remote == null) || (remote.arrayLength > 1)) { throw new Exception("Something went wrong!") }
 		else {
-			// THIS IS FOR INSERTING STATE INTO THE REMOTE COMPONENT
 
-			// parsing state to Data
-			//Int content[] = encoder.jsonToArray(state, typeof(Int[]), null)
-			// adding content to list in the object
-			/*Object objects[] = remote[0].class.getObjects("data.adt.List:heap")
-			List list = objects[0]
-			for (int i = 0; i < content.arrayLength; i++) {
-				list.add(content[i])
-			}
-			out.println("$(debugMSG) State inserted!")*/
 		}
 	}
-
-	// TODO: need to pause component, wait for object to finish processing
-	// any threads it is currently running, etc.
-	//void clearState() {
-		// adding content to list in the object
-	//	Object objects[] = remote[0].class.getObjects("data.adt.List:heap")
-	//	List list = objects[0]
-	//	while (list.getLength() > 0) {
-	//		list.remove(list.getFirst())
-	//	}
-	//}
 
 	void handleRequest(TCPSocket client) {
 		// reading data from socket -- this could be optimised
@@ -69,12 +59,18 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 				}
 			}
 		}
+
 		// processing command
 		String helper[] = strUtil.explode(command, "!")
+		out.println(" TESTING : $(helper[0].string)")
 		if (helper[0].string == "../distributor/RemoteMR.o") {
-			startRemoteProcess(helper[0].string)
-		} else {
-			//clearState()
+			startRemoteProcess(helper[0].string,"mr")
+		}else if (helper[0].string == "../distributor/RemoteMRR.o") {
+			startRemoteProcess(helper[0].string,"mrr")
+		}else if (helper[0].string == "../distributor/RemoteHD.o") {
+			startRemoteProcess(helper[0].string,"hd")
+		}else if (helper[0].string == "../distributor/RemoteHDR.o") {
+			startRemoteProcess(helper[0].string,"hdr")	
 		}
 		client.send("OK")
 		client.disconnect()

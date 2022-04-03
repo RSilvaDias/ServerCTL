@@ -1,6 +1,6 @@
 const int DEFAULT_PORT = 2010
 
-component provides App requires io.Output out, data.IntUtil iu, proxy.DistProxy hdr {
+component provides App requires io.Output out, data.IntUtil iu, proxy.DistProxyHDR hdr {
 
 	int port = 0
 

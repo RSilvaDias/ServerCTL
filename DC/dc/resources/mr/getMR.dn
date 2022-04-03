@@ -1,6 +1,5 @@
 uses ws.DocStream
 
 interface getMR {
-	void storeData(byte content[], char uuid[], DocStream stream)
 	void gMR(DocStream stream)
 }

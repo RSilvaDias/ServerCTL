@@ -8,7 +8,5 @@ uses ws.DocStream
 
 
 interface getHD {
-
-//  void storeData(byte content[], char uuid[], DocStream stream)
-	void gHD(DocStream stream)
+  void gHD(DocStream stream)
 }

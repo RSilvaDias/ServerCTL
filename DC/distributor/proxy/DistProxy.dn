@@ -30,7 +30,7 @@ component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.
 		char ip[] = request.params[0].value
 		char port[] = request.params[1].value
 		char idGen[] = request.params[2].value
-		DocStreamProxy proxy = new DocStreamProxy(ip, iu.intFromString(port), idGen) 
+		DocStreamProxy proxy = new DocStreamProxy(ip, iu.intFromString(port), idGen)
 		getmr.gMR(proxy)
 		response.status = 1
 		response.value = ""
@@ -107,7 +107,7 @@ component provides proxy.DistProxy requires io.Output out, data.IntUtil iu, net.
 	}
 
 	void DistProxy:start(int port) {
-		out.println("STARTED")
+		out.println("DistProxy STARTED")
 		serviceStatus = true
 		host = new TCPServerSocket()
 		if (!host.bind(TCPServerSocket.ANY_ADDRESS, port)) {

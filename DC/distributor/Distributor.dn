@@ -4,12 +4,15 @@ const char HELP[]       = "help"
 const char CREATE[]     = "create"
 const char LOCAL[]      = "local"
 const char PERCEPTION[] = "perception"
-const char TEST[]		= "test"
-const char MR[]			= "mr"
+const char TEST[]				= "test"
+const char MR[]					= "mr"
+const char MRR[]				= "mrr"
+const char HD[]					= "hd"
+const char HDR[]				= "hdr"
 const char EXIT[]       = "exit"
 
 
-component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in, 
+component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in,
 	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du, time.Timer t{
 
 	String remoteConfigs[] 		= null
@@ -20,23 +23,24 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void help() {
 		out.println("Command list:")
 		out.println(" $(HELP) - to list all commands")
-        //out.println(" $(CREATE) - to create pods")
-		out.println(" $(MR) - to distribute getMR")
+    out.println(" $(MR) - to distribute getMR")
+		out.println(" $(MRR) - to distribute getMRR")
+		out.println(" $(HD) - to distribute getHD")
+		out.println(" $(HDR) - to distribute getHDR")
 		out.println(" $(LOCAL) - to bring list locally")
-		//out.println(" $(PERCEPTION) - to get perception data from the current running composition")
 		out.println(" $(EXIT) - to finish execution")
 	}
 
 	void local() {
-		perception.setConfig(localConfigs[0].string) 
+		perception.setConfig(localConfigs[0].string)
 		out.println("$(debugMSG) Local composition running.")
 	}
 
 	void distribute(char proxyInterface[]) {
-        char remoteConfig[] = getRemoteConfig("$(proxyInterface)")
-		if (remoteConfig != null) {	
+    char remoteConfig[] = getRemoteConfig("$(proxyInterface)")
+		if (remoteConfig != null) {
 			perception.setConfig(remoteConfig)
-			out.println("$(debugMSG) Remote composition [($proxyInterface)] running.")	
+			out.println("$(debugMSG) Remote composition [($proxyInterface)] running.")
 		} else {
 			throw new Exception("Something went wrong! Couldn't find remote proxy.")
 		}
@@ -78,33 +82,24 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 
 	void commandInterpret(char cmd[]) {
 		String cmdList[] = strUtil.explode(cmd, " ")
-		char quantity[] 
+		char quantity[]
         if (cmdList.arrayLength == 1) {
-			if (cmd == HELP) {
-				help()
-			/*
-			} else if (cmd == PERCEPTION) {
-				perception()
-			} else if (cmd == TEST) {
-				out.println("$(debugMSG) Starting test...")
-				local()
-				observationLoop(10, 1000)
-				distribute("ListCPPropagate.o")
-				observationLoop(10, 1000)
-				distribute("ListCPAlternate.o")
-				observationLoop(10, 1000)
-				distribute("ListCPSharding.o")
-				observationLoop(10, 1000)
-				out.println("$(debugMSG) Test finished!")
-			*/
-			} else if (cmd == LOCAL) {
-				local()
-			} else if (cmd == MR) {
-				distribute("mr/getMRProxy.o")
-			} else {
-				out.println("Invalid command.")
-			}
-		}
+					if (cmd == HELP) {
+						help()
+					} else if (cmd == LOCAL) {
+						local()
+					} else if (cmd == MR) {
+						distribute("mr/getMRProxy.o")
+					} else if (cmd == MRR){
+						distribute("mrr/getMRRProxy.o")
+					} else if (cmd == HD){
+						distribute("hd/getHDProxy.o")
+					} else if (cmd == HDR){
+						distribute("hdr/getHDRProxy.o")
+					} else {
+						out.println("Invalid command.")
+					}
+				}
 	}
 
 	char[] getRemoteConfig(char proxy[]) {
@@ -117,6 +112,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	}
 
 	// Guess there's a better way of doing this...
+	//	THIS IS NOT WORKING ROBERTO , I DONT KNOW HOW TO FIX
 	void remoteLocalSeparation() {
 		if ((remoteConfigs == null) || (localConfigs == null)) {
 			out.println("$(debugMSG) Separating local and remote compositions...")
@@ -124,7 +120,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 			for (int confPointer = 0; confPointer < configs.arrayLength; confPointer++) {
 				bool remote = false
 				for (int distProxy = 0; distProxy < distributedProxies.arrayLength; distProxy++) {
-					if (strUtil.find(configs[confPointer].string, distributedProxies[distProxy].string) 
+					if (strUtil.find(configs[confPointer].string, distributedProxies[distProxy].string)
 						!= StringUtil.NOT_FOUND) {
 						remoteConfigs = new String[](remoteConfigs, configs[confPointer])
 						remote = true
@@ -139,14 +135,15 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	}
 
 	// TODO: dynamically load the names of distributed proxies from the folder distributor/data/adt/
-	// currently hard-coded 
+	// currently hard-coded
+	// NOT WORKING , DONT KNOW HOW TO FIX , SEND HELP
 	void loadDistributedProxies() {
 		if (distributedProxies == null) {
 			distributedProxies = new String[](
 				new String("getMRProxy.o"),
+				new String("getMRRProxy.o"),
 				new String("getHDProxy.o"),
-				new String("getHDRProxy.o"),
-				new String("getMRRProxy.o"))
+				new String("getHDRProxy.o"))
 		}
 	}
 
@@ -154,18 +151,20 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		perception = new Perception(true)
 		/* Loading target system and adding a monitoring proxy to it */
 		perception.setMain("../repository/TCPNetwork.o", null)
-		
-        String configs[] = perception.getAllConfigs()
-		for (int i = 0; i < configs.arrayLength; i++) {
+
+    String configs[] = perception.getAllConfigs()
+		/*for (int i = 0; i < configs.arrayLength; i++) {
 			out.println("$(debugMSG) $(iu.intToString(i+1)): $(configs[i].string)")
-		}
+		}*/
 		loadDistributedProxies()
 		remoteLocalSeparation()
 		local()
 		/* command prompt */
 		char cmd[] = "start"
 		while (cmd != "exit") {
-			if (cmd != "start") { commandInterpret(cmd)	}
+			if (cmd != "start") {
+				commandInterpret(cmd)
+			}
 			out.print("distributor> ")
 			cmd = in.readln()
 		}
