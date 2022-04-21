@@ -1,8 +1,0 @@
-data Service{
-  	char name[]
-}
-
-interface Serverctl {
-    void get_service_names()
-    void create_service(char name[])
-}
