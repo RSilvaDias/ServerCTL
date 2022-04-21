@@ -2,7 +2,6 @@
 
 First draft of the ServerCTL script to integrate the middleware Distributor.
 Basic funcionalities include:
-  - Create a deployment on Kubernetes
-  - Verify status of pod
-  - Expose service to generate a cluster_IP
-
+  - Create deployments and services on Kubernetes.
+  - Storing pods name used for connecting with distributor.
+  - RESTful APi to communicate with Distributor.
