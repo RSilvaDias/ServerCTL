@@ -24,10 +24,13 @@ data IPAddr {
 
 const char gMR_FUNC[]   = "gMR"
 const char LOCALHOST[] 	= "localhost"
+const char remoteone[]  = "mr0"
+const char remotetwo[]  = "mr1"
+
 
 component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, net.TCPSocket,
-	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu,
-	proxy.DocStreamRP dcRp {
+	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu,time.Timer t,
+	proxy.DocStreamRP dcRp, serverctl.Serverctl SCTL {
 
 	IPAddr remoteDistsIps[] = null
 	IPAddr remoteListsIps[] = null
@@ -38,29 +41,38 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 
 	int pointer = 0
 	int id = 0
+    char name[] = "mr"
+    int qtt = 0
+    
 
 	void setupRemoteDistsIPs() {
 		if (remoteDistsIps == null) {
-			remoteDistsIps = new IPAddr[2]
-			remoteDistsIps[0] = new IPAddr()
-			remoteDistsIps[0].ip = new char[](LOCALHOST)
-			remoteDistsIps[0].port = 8081
-			remoteDistsIps[1] = new IPAddr()
-			remoteDistsIps[1].ip = new char[](LOCALHOST)
-			remoteDistsIps[1].port = 8082
-		}
-	}
 
+            int q1 = SCTL.get_mr()
+            qtt = q1
+            remoteDistsIps = new IPAddr[q1]
+            t.sleep(5000)
+            for (int i = 0; i < q1 ; i++){
+                remoteDistsIps[i] = new IPAddr()
+                char nameip[] = "$name$(iu.makeString(i))"
+                remoteDistsIps[i].ip = new char[](nameip)
+                remoteDistsIps[i].port = 8081
+            }
+        }
+        
+    }
+    // RemoteFunction
 	void setupRemoteListsIPs() {
 		if (remoteListsIps == null) {
-			remoteListsIps = new IPAddr[2]
-			remoteListsIps[0] = new IPAddr()
-			remoteListsIps[0].ip = new char[](LOCALHOST)
-			remoteListsIps[0].port = 2010
-			remoteListsIps[1] = new IPAddr()
-			remoteListsIps[1].ip = new char[](LOCALHOST)
-			remoteListsIps[1].port = 2011
-		}
+			remoteListsIps = new IPAddr[qtt]
+            t.sleep(2000)
+			for ( int i = 0 ; i < qtt ; i++){
+                remoteListsIps[i] = new IPAddr()
+                char listip[] = "$name$(iu.makeString(i))"
+			    remoteListsIps[i].ip = new char[](listip)
+			    remoteListsIps[i].port = 2010
+            }
+        }		
 	}
 
 	void sendMsgToRemoteDists(char msg[]) {
@@ -159,7 +171,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		char idGen[] = idGenerator()
 		dcRp.associate(stream, idGen)
 		//TODO think about this msg format
-		char content2[] = new char[](requestStr, "!", "localhost!5011!", idGen, "\r\r\r\r")
+		char content2[] = new char[](requestStr, "!", "distributor!5011!", idGen, "\r\r\r\r")
 		Response response = makeRequest(content2)
 	}
 
@@ -185,7 +197,6 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
-		out.println("ENTRANDO AQUI - MR")
 		char msg[] = new char[]("../distributor/RemoteMR.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 		// server

@@ -21,18 +21,15 @@ component provides mr.getMR requires io.Output out,
 
 	MySQL getMySQL() {
 		MySQL mysql = null
-		/*if (configFile == null) {
+		if (configFile == null) {
 			configFile = new ConfigFile("../configs/database/database.config")
 		}
 		char host[] = configFile.getValue("database")
 		char user[] = configFile.getValue("db_user")
-		char pass[] = configFile.getValue("db_pass")*/
-		mysql = new MySQL("34.122.91.56", 3306, "root", "root", "data_collector")
+		char pass[] = configFile.getValue("db_pass")
+		mysql = new MySQL(host, 3306, user, pass, "data_collector")
 		return mysql
 	}
-
-	// NOTE: This is a problem for the NFRProxy
-	// "/collector/store/{uuid}" This is a temporary solution for storing data whilst AMQP is not supported by DANA
 
 	void getMR:gMR(DocStream stream) {
 		queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)

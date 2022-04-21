@@ -4,24 +4,36 @@ component provides serverctl.Serverctl requires io.Output out, net.http.HTTPRequ
 		// const char url[] = "http://serverctl:5000/names" //ServerCTl
         //const char url[] = "http://localhost:5000/names" // localhost for testing
         const char url[] = "http://serverctl:5000/names/many" // To create x pods.
-		HTTPResponse msg = new HTTPResponse()
+		//const char url[] = "http://localhost:5000/names/many" // To create x pods.
+        HTTPResponse msg = new HTTPResponse()
 
       void Serverctl:get_service_names(){
         msg = httpreq.get(url, null)
         out.println("$(msg.responseCode)")
         out.println("$(msg.content)")
       }
-      int Serverctl:get_final(){
-        msg = httpreq.get("http://localhost:5000/names/final", null)
-        return iu.intFromString(msg.content) 
-      }
 
-      int Serverctl:get_quantity(){
-        msg = httpreq.get(url, null)
+    int Serverctl:get_mr(){
+        msg = httpreq.get("http://serverctl:5000/names/mr",null)
         return iu.intFromString(msg.content)
-      }
+    }
+    int Serverctl:get_mrr(){
+        msg = httpreq.get("http://serverctl:5000/names/mrr",null)
+        return iu.intFromString(msg.content)
+    }
+
+    int Serverctl:get_hd(){
+        msg = httpreq.get("http://serverctl:5000/names/hd",null)
+        return iu.intFromString(msg.content)
+    }
+
+    int Serverctl:get_hdr(){
+        msg = httpreq.get("http://serverctl:5000/names/hdr",null)
+        return iu.intFromString(msg.content)
+    }
+
       
-      void Serverctl:create_service(char name[]){
+    void Serverctl:create_service(char name[]){
         Header header = new Header()
         header.key = "Content-Type"
   		header.value = "application/json"
@@ -30,17 +42,21 @@ component provides serverctl.Serverctl requires io.Output out, net.http.HTTPRequ
         char encoded[] = jsonEncoder.jsonFromData(s, null)
   		msg = httpreq.post(url,header,encoded)
         out.println("$(msg.responseCode)")
-      }
+    }
 
-      void Serverctl:create_pods(int quantity){
+    void Serverctl:create_pods(char name[] ,int quantity){
         Header header = new Header()
         header.key = "Content-Type"
   		header.value = "application/json"
         Service s = new Service()
-        s.name = "remotedist"
+        s.name = name
         s.quantity = quantity
         char encoded[] = jsonEncoder.jsonFromData(s, null)
   		msg = httpreq.post(url,header,encoded)
-        out.println("$(msg.responseCode)")
-      }
+        if (msg.responseCode  == "201"){
+            out.println("Pods Created Successfully")
+        }else{
+            out.println("Error creating Pods")
+        }
+    }
 }

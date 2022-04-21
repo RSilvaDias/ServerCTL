@@ -13,7 +13,7 @@ const char EXIT[]       = "exit"
 
 
 component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in,
-	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du, time.Timer t{
+	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du, time.Timer t,serverctl.Serverctl SCTL{
 
 	String remoteConfigs[] 		= null
 	String localConfigs[] 		= null
@@ -23,7 +23,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	void help() {
 		out.println("Command list:")
 		out.println(" $(HELP) - to list all commands")
-    out.println(" $(MR) - to distribute getMR")
+        out.println(" $(MR) - to distribute getMR")
 		out.println(" $(MRR) - to distribute getMRR")
 		out.println(" $(HD) - to distribute getHD")
 		out.println(" $(HDR) - to distribute getHDR")
@@ -84,6 +84,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		String cmdList[] = strUtil.explode(cmd, " ")
 		char quantity[]
 		char j[]
+        int qt 
 
         if (cmdList.arrayLength == 1) {
 					if (cmd == HELP) {
@@ -91,53 +92,96 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 					} else if (cmd == LOCAL) {
 						local()
 					} else if (cmd == MR) {
+                        out.println("Amount of pods: ")
+                        quantity = in.readln()
+                        qt = iu.intFromString(quantity)
+                        SCTL.create_pods("mr",qt)
 
-						for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
-							if (strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") != StringUtil.NOT_FOUND ){
+                        for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
+							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") != StringUtil.NOT_FOUND ) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
+                                    j = iu.makeString(i)
+                                    
 							}
 						}
-						out.println("Choose config : ")
-						j = in.readln()
-						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-						distribute("mr/getMRProxy.o")
+						
+                        out.println("Connecting to Pods on config $(j)")
+                        perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
+                        // TODO: Debug this
+                        // Even when pods are already running, need some extra time to avoid connection error.
+                        t.sleep(10000)
+                        out.println("$(debugMSG) Remote composition [(mr/getMRProxy.o)] running.")
+                        //distribute("mr/getMRProxy.o")
 
 					} else if (cmd == MRR){
-
-						for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
-							if (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") != StringUtil.NOT_FOUND ){
+                        out.println("Amount of pods: ")
+                        quantity = in.readln()
+                        qt = iu.intFromString(quantity)
+                        SCTL.create_pods("mrr",qt)
+                        
+                        for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
+							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") != StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
+                                    j = iu.makeString(i)
 							}
 						}
-						out.println("Choose config : ")
-						j = in.readln()
+						out.println("Connecting to Pods on config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-						distribute("mrr/getMRRProxy.o")
+                        t.sleep(10000)
+                        out.println("$(debugMSG) Remote composition [(mrr/getMRRProxy.o)] running.")
+                        //distribute("mrr/getMRRProxy.o")
 					} else if (cmd == HD){
 
-						for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
-							if (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") != StringUtil.NOT_FOUND ){
+						out.println("Amount of pods: ")
+                        quantity = in.readln()
+                        qt = iu.intFromString(quantity)
+                        SCTL.create_pods("hd",qt)
+                        
+                        for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
+							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") != StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
+                                    j = iu.makeString(i)
 							}
 						}
-						out.println("Choose config : ")
-						j = in.readln()
+						out.println("Connecting to Pods on config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-						distribute("hd/getHDProxy.o")
+                        t.sleep(10000)
+                        out.println("$(debugMSG) Remote composition [(hd/getHDProxy.o)] running.")
+                        //distribute("hd/getHDProxy.o")
 					} else if (cmd == HDR){
-						for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
-							if (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") != StringUtil.NOT_FOUND ){
+						out.println("Amount of pods: ")
+                        quantity = in.readln()
+                        qt = iu.intFromString(quantity)
+                        SCTL.create_pods("hdr",qt)
+                        // Removed Sleep as ServerCTL deployment always check for status while creating pods.
+                        for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
+							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") != StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
+                                    j = iu.makeString(i)
 							}
 						}
-						out.println("Choose config : ")
-						j = in.readln()
+						
+						out.println("Connecting to Pods with config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-						distribute("hdr/getHDRProxy.o")
+                        t.sleep(10000)
+                        out.println("$(debugMSG) Remote composition [(hdr/getHDRProxy.o)] running.")
+                        //distribute("hdr/getHDRProxy.o")
 					} else {
 						out.println("Invalid command.")
 					}
@@ -177,7 +221,6 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 
 	// TODO: dynamically load the names of distributed proxies from the folder distributor/data/adt/
 	// currently hard-coded
-	// NOT WORKING , DONT KNOW HOW TO FIX , SEND HELP
 	void loadDistributedProxies() {
 		if (distributedProxies == null) {
 			distributedProxies = new String[](

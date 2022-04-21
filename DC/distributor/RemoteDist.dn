@@ -62,7 +62,6 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 
 		// processing command
 		String helper[] = strUtil.explode(command, "!")
-		out.println(" TESTING : $(helper[0].string)")
 		if (helper[0].string == "../distributor/RemoteMR.o") {
 			startRemoteProcess(helper[0].string,"mr")
 		}else if (helper[0].string == "../distributor/RemoteMRR.o") {
@@ -70,7 +69,7 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 		}else if (helper[0].string == "../distributor/RemoteHD.o") {
 			startRemoteProcess(helper[0].string,"hd")
 		}else if (helper[0].string == "../distributor/RemoteHDR.o") {
-			startRemoteProcess(helper[0].string,"hdr")	
+			startRemoteProcess(helper[0].string,"hdr")
 		}
 		client.send("OK")
 		client.disconnect()

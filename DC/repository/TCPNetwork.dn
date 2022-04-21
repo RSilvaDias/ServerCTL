@@ -1,5 +1,5 @@
 const char debugMSG[] = "[@TCPNetwork]"
-const int LISTEN_PORT = 8080
+const int LISTEN_PORT = 8081
 // list of params
 const char PORT_NUM[] = "port_num"
 const char HELP[]     = "help"

@@ -30,8 +30,8 @@ component provides proxy.DistProxyMRR requires io.Output out, data.IntUtil iu, n
 		char ip[] = request.params[0].value
 		char port[] = request.params[1].value
 		char idGen[] = request.params[2].value
-    char uuid[] = request.params[3].value
-    out.println("--------- TESTING : $(uuid) ----------------")
+        char uuid[] = request.params[3].value
+    
 		DocStreamProxy proxy = new DocStreamProxy(ip, iu.intFromString(port), idGen)
 		getmrr.gMRR(uuid,proxy)
 		response.status = 1
