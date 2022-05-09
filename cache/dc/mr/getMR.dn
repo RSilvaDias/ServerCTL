@@ -1,0 +1,75 @@
+/* DataCollectorManager.dn
+ *
+ * This component is responsible to implement the business logic of the DataCollector microservice.
+ *
+ * This version includes:
+ *  - implementation of the storeData as a way to support synchronous data insertion;
+ *  - implementation all functions defined of DataCollector;
+ * More info at:
+ *  - http://playground.interscity.org/#/
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - Sept @ 2018
+ */
+const char debugMSG[] = "[@mostRecentData]"
+
+component provides mr.getMR requires io.Output out,
+	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile,
+    cache.Cache cache{
+
+	static ConfigFile configFile = null
+	static Mutex lock = new Mutex()
+    char buff[]
+
+	MySQL getMySQL() {
+		MySQL mysql = null
+		if (configFile == null) {
+			configFile = new ConfigFile("../configs/database/database.config")
+		}
+		char host[] = configFile.getValue("database")
+		char user[] = configFile.getValue("db_user")
+		char pass[] = configFile.getValue("db_pass")
+		mysql = new MySQL(host, 3306, user, pass, "data_collector")
+		return mysql
+	}
+
+	void getMR:gMR(DocStream stream) {
+        char key[] = 1
+        int maxAge = 5
+        char result[]
+        result = cache.get(key)
+        if (result == null ){
+		    buff = queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
+            cache.insert(key,buff,maxAge)
+        }else{
+            stream.write(result)
+        }
+    }
+
+	// implementing chunked transfer protocol
+	char[] queryExec(char query[], DocStream stream) {
+		MySQL mysql
+		MySQLRow rows[]
+		mutex(lock) {
+			mysql = getMySQL()
+			mysql.execute(query)
+			rows = mysql.fetchAll()
+		}
+		if (rows == null) {
+            buff = new char[](buff,"{\"error\": \"resource data not found\"}")
+			stream.write("{\"error\": \"resource data not found\"}")
+		} else {
+			stream.write("{ \"data\": [ ")
+			for (int i = 0; i < rows.arrayLength; i++) {
+				char helper[] = null
+				if (i != 0) { helper = ", " }
+				stream.write(new char[](helper, codifier.decode(rows[i].fields[1].value)))
+                buff = new char[](helper, codifier.decode(rows[i].fields[1].value))
+			}
+			stream.write("] }")
+		}
+		mysql.close()
+		//}
+        return buff
+	}
+}

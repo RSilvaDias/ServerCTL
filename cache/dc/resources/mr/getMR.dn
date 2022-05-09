@@ -1,0 +1,5 @@
+uses ws.DocStream
+
+interface getMR {
+	void gMR(DocStream stream)
+}

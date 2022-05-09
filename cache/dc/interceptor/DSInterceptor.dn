@@ -1,0 +1,48 @@
+component provides interceptor.DSInterceptor requires ws.DocStream {
+	
+	DocStream stream = null
+	char accumulatedOutput[] = null
+
+	char[] DSInterceptor:get() {
+		return accumulatedOutput
+	}
+
+	void DSInterceptor:set(DocStream original) {
+		stream = original
+		accumulatedOutput = null
+	}
+
+	DSInterceptor:DSInterceptor(store TCPSocket s, store Header headers[], store Header responseHeaders[]) {
+		super(s, headers, responseHeaders)
+	}
+
+	Header[] DSInterceptor:getRequestHeaders() {
+		return stream.getRequestHeaders()
+	}
+	
+	void DSInterceptor:write(char dt[]) {
+		accumulatedOutput = new char[](accumulatedOutput, dt)
+		//stream.write(dt)
+	}
+	
+	void DSInterceptor:writeStatus(int code, char reason[], Header headers[]) {
+		stream.writeStatus(code, reason, headers)
+	}
+	
+	void DSInterceptor:setSessionKey(char key[], char value[]) {
+		stream.setSessionKey(key, value)
+	}
+	
+	char[] DSInterceptor:getSessionKey(char key[]) {
+		return stream.getSessionKey(key)
+	}
+	
+	void DSInterceptor:remSessionKey(char key[]) {
+		stream.remSessionKey(key)
+	}
+	
+	void DSInterceptor:endStream() {
+		stream.endStream()
+		accumulatedOutput = null
+	}
+}
