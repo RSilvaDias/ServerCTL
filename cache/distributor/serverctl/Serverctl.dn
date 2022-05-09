@@ -1,0 +1,62 @@
+component provides serverctl.Serverctl requires io.Output out, net.http.HTTPRequest httpreq,data.json.JSONEncoder jsonEncoder,
+                                                data.json.JSONParser parser, data.IntUtil iu{
+
+		// const char url[] = "http://serverctl:5000/names" //ServerCTl
+        //const char url[] = "http://localhost:5000/names" // localhost for testing
+        const char url[] = "http://serverctl:5000/names/many" // To create x pods.
+		//const char url[] = "http://localhost:5000/names/many" // To create x pods.
+        HTTPResponse msg = new HTTPResponse()
+
+      void Serverctl:get_service_names(){
+        msg = httpreq.get(url, null)
+        out.println("$(msg.responseCode)")
+        out.println("$(msg.content)")
+      }
+
+    int Serverctl:get_mr(){
+        msg = httpreq.get("http://serverctl:5000/names/mr",null)
+        return iu.intFromString(msg.content)
+    }
+    int Serverctl:get_mrr(){
+        msg = httpreq.get("http://serverctl:5000/names/mrr",null)
+        return iu.intFromString(msg.content)
+    }
+
+    int Serverctl:get_hd(){
+        msg = httpreq.get("http://serverctl:5000/names/hd",null)
+        return iu.intFromString(msg.content)
+    }
+
+    int Serverctl:get_hdr(){
+        msg = httpreq.get("http://serverctl:5000/names/hdr",null)
+        return iu.intFromString(msg.content)
+    }
+
+      
+    void Serverctl:create_service(char name[]){
+        Header header = new Header()
+        header.key = "Content-Type"
+  		header.value = "application/json"
+        Service s = new Service()
+        s.name = name
+        char encoded[] = jsonEncoder.jsonFromData(s, null)
+  		msg = httpreq.post(url,header,encoded)
+        out.println("$(msg.responseCode)")
+    }
+
+    void Serverctl:create_pods(char name[] ,int quantity){
+        Header header = new Header()
+        header.key = "Content-Type"
+  		header.value = "application/json"
+        Service s = new Service()
+        s.name = name
+        s.quantity = quantity
+        char encoded[] = jsonEncoder.jsonFromData(s, null)
+  		msg = httpreq.post(url,header,encoded)
+        if (msg.responseCode  == "201"){
+            out.println("Pods Created Successfully")
+        }else{
+            out.println("Error creating Pods")
+        }
+    }
+}

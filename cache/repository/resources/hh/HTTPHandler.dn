@@ -1,0 +1,5 @@
+uses rh.RequestHandler
+
+interface HTTPHandler {
+	void process(Command cmd, TCPSocket s)
+}

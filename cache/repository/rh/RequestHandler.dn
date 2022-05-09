@@ -1,0 +1,44 @@
+const char debugMSG[] = "[@RequestHandler]"
+
+component provides rh.RequestHandler requires io.Output out, net.TCPSocket,
+	data.StringUtil stringUtil, hh.HTTPHandler hh {
+
+	Command readCommand(TCPSocket socket) {
+		Command cmd = new Command()
+		Header headers[]
+		char buf[]
+		char last4[] = new char[4]
+		while (last4 != "\r\n\r\n") {
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last4[0] = last4[1]
+			last4[1] = last4[2]
+			last4[2] = last4[3]
+			last4[3] = b[0]
+		}
+		String lines[] = stringUtil.explode(buf, "\r\n")
+		String cmd_parts[] = stringUtil.explode(lines[0].string, " ")
+		if (stringUtil.lowercase(cmd_parts[0].string) == "get") { cmd.type = Command.GET }
+		else if (stringUtil.lowercase(cmd_parts[0].string) == "post") { cmd.type = Command.POST }
+		cmd.resource = cmd_parts[1].string
+		for (int i = 1; i < lines.arrayLength; i++) {
+			int ndx = stringUtil.find(lines[i].string, ":") + 1
+			char key[] = stringUtil.subString(lines[i].string, 0, ndx - 1)
+			char value[] = stringUtil.trim(stringUtil.subString(lines[i].string, 
+				ndx, lines[i].string.arrayLength - ndx))
+			headers = new Header[](headers, new Header(stringUtil.lowercase(key), value))
+		}
+		cmd.headers = headers	
+		return cmd
+	}
+	
+	void RequestHandler:processStream(TCPSocket s) {
+		Command cmd = readCommand(s)
+		if (cmd == null) {
+			s.disconnect()
+			throw new Exception("malformed or interrupted request")
+		}
+		hh.process(cmd, s)
+	}
+
+}

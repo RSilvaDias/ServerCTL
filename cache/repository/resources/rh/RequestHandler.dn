@@ -1,0 +1,17 @@
+uses net.TCPSocket
+uses net.http.Header
+
+data Command {
+	const int GET = 1
+	const int POST = 2
+	const int PUT = 3
+	const int DELETE = 4
+	int type
+	
+	char resource[]
+	Header headers[]
+}
+
+interface RequestHandler {
+	void processStream(TCPSocket s)
+}

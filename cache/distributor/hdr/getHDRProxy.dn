@@ -1,0 +1,202 @@
+const char debugMSG[] 	= "[@HistoricalDataResourceProxy]"
+
+data Param {
+	char value[]
+}
+
+data Request {
+	char functionName[]
+	int numParams
+	Param params[]
+}
+
+data Response {
+	// 1 OK - 2 FAILED
+	byte status
+	// if it's null or "" this has to be translated to null
+	char value[]
+}
+
+data IPAddr {
+	char ip[]
+	int port
+}
+
+const char gHDR_FUNC[]   = "gHDR"
+const char LOCALHOST[] 	= "localhost"
+
+component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parser, net.TCPSocket,
+	net.TCPServerSocket, data.StringUtil strUtil, io.Output out, data.IntUtil iu,time.Timer t,
+	proxy.DocStreamRP dcRp, serverctl.Serverctl SCTL {
+
+	IPAddr remoteDistsIps[] = null
+	IPAddr remoteListsIps[] = null
+	Mutex remoteListsIpsLock = new Mutex()
+	Mutex idLock = new Mutex()
+	bool flagDocStream = true
+	TCPServerSocket sDocStream = null
+
+	int pointer = 0
+	int id = 0
+    char name[] = "hdr"
+    int qtt = 0
+
+	void setupRemoteDistsIPs() {
+		if (remoteDistsIps == null) {
+
+            int q1 = SCTL.get_hdr()
+            qtt = q1
+            remoteDistsIps = new IPAddr[q1]
+            t.sleep(5000)
+            for (int i = 0; i < q1 ; i++){
+                remoteDistsIps[i] = new IPAddr()
+                char nameip[] = "$name$(iu.makeString(i))"
+                remoteDistsIps[i].ip = new char[](nameip)
+                remoteDistsIps[i].port = 8081
+            }
+        }
+        
+    }
+    // RemoteFunction
+	void setupRemoteListsIPs() {
+		if (remoteListsIps == null) {
+			remoteListsIps = new IPAddr[qtt]
+            t.sleep(2000)
+			for ( int i = 0 ; i < qtt ; i++){
+                remoteListsIps[i] = new IPAddr()
+                char listip[] = "$name$(iu.makeString(i))"
+			    remoteListsIps[i].ip = new char[](listip)
+			    remoteListsIps[i].port = 2010
+            }
+        }		
+	}
+
+	void sendMsgToRemoteDists(char msg[]) {
+		setupRemoteDistsIPs()
+		for (int i = 0; i < remoteDistsIps.arrayLength; i++) {
+			connectAndSend(remoteDistsIps[i], msg, true)
+		}
+	}
+
+	Response parseResponse(char content[]) {
+		String helper[] = strUtil.explode(content, "!")
+		Response response
+		if (helper.arrayLength > 1) {
+			response = parser.jsonToData(helper[0].string, typeof(Response), null)
+			Response response2 = new Response()
+			response2.value = helper[1].string
+			response2.status = response.status
+			response = response2
+		} else {
+			response = parser.jsonToData(content, typeof(Response), null)
+		}
+		return response
+	}
+
+	Response readResponse(TCPSocket s) {
+		Response response = null
+		char buf[] = null
+		int len = 0
+		char command[] = null
+		while ((buf = s.recv(1)).arrayLength > 0) {
+			command = new char[](command, buf)
+			len++
+			//stop condition
+			if (len >= 4) {
+				if ((command[len-4] == "\r") && (command[len-3] == "\r") &&
+					(command[len-2] == "\r") && (command[len-1] == "\r")) {
+					response = parseResponse(strUtil.subString(command,
+						0, command.arrayLength-4))
+					break
+				}
+			}
+		}
+		if (response == null) { s.disconnect() }
+		return response
+	}
+
+	bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
+		if (!remoteObj.connect(addr.ip, addr.port)) {
+			out.println("Connection error!")
+			return false
+		}
+		return true
+	}
+
+	Response connectAndSend(IPAddr addr, char content[], bool readResponse) {
+		TCPSocket remoteObj = new TCPSocket()
+		Response resp = null
+		if (establishConnection(addr, remoteObj)) {
+			remoteObj.send(content)
+			if (readResponse) { resp = readResponse(remoteObj) }
+			remoteObj.disconnect()
+		}
+		return resp
+	}
+
+	Response makeRequest(char content[]) {
+		setupRemoteListsIPs()
+		IPAddr addr = null
+		mutex(remoteListsIpsLock) {
+			if (remoteListsIps.arrayLength > 1) {
+				if (pointer == remoteListsIps.arrayLength) { pointer = 0 }
+				addr = remoteListsIps[pointer]
+				pointer++
+			} else { out.println("ERROR!") }
+		}
+		return connectAndSend(addr, content, true)
+	}
+
+	char[] idGenerator() {
+		/*int genId = 0
+		mutex(idLock) {
+			genId = iu.makeString(++id)
+		}
+		return genId*/
+		mutex(idLock) {
+			id++
+			return iu.makeString(id)
+		}
+	}
+
+	void getHDR:gHDR(char uuid[],DocStream stream) {
+		Request request = new Request()
+		request.functionName = gHDR_FUNC
+		request.numParams = 4 // this should be changed
+		char requestStr[] = parser.jsonFromData(request, null)
+		char idGen[] = idGenerator()
+		dcRp.associate(stream, idGen)
+		//TODO think about this msg format
+		char content2[] = new char[](requestStr, "!", "localhost!5012!", idGen, "!", uuid, "\r\r\r\r")
+		Response response = makeRequest(content2)
+	}
+
+	void AdaptEvents:inactive() {
+		flagDocStream = false
+		if (sDocStream != null) {
+			sDocStream.unbind()
+		}
+	}
+
+	void createDocStreamSocket() {
+		sDocStream = new TCPServerSocket()
+		if (!sDocStream.bind(TCPServerSocket.ANY_ADDRESS, 5014)) {
+			throw new Exception("Failed to bind master socket")
+		}
+		while (flagDocStream) {
+			TCPSocket cs = new TCPSocket()
+			if (cs.accept(sDocStream)) {
+				asynch::dcRp.processDocStream(cs)
+			}
+		}
+	}
+
+	// this is extremely hardcoded! ):
+	void AdaptEvents:active() {
+		char msg[] = new char[]("../distributor/RemoteHDR.o!", "\r\r\r\r")
+		sendMsgToRemoteDists(msg)
+		// server
+		asynch::createDocStreamSocket()
+	}
+
+}

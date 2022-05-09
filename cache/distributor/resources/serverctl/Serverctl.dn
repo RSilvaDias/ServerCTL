@@ -1,0 +1,15 @@
+data Service{
+  	char name[]
+    int quantity
+}
+
+interface Serverctl {
+    void get_service_names()
+    void create_service(char name[])
+    void create_pods(char name[],int quantity)
+    int get_mr()
+    int get_mrr()
+    int get_hd()
+    int get_hdr()
+}
+

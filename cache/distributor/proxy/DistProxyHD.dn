@@ -1,0 +1,124 @@
+data Param {
+	char value[]
+}
+
+data Request {
+	char functionName[]
+	int numParams
+	Param params[]
+}
+
+data Response {
+	// 1 OK - 2 FAILED
+	byte status
+	// if it's null or "" this has to be translated to null
+	char value[]
+}
+
+/* Available list operations */
+const char gHD_FUNC[]   = "gHD"
+
+component provides proxy.DistProxyHD requires io.Output out, data.IntUtil iu, net.TCPSocket,
+	net.TCPServerSocket, hd.getHD gethd, data.json.JSONEncoder parser, data.StringUtil strUtil,
+	ws.DocStreamProxy {
+
+	bool serviceStatus
+	TCPServerSocket host
+
+	Response gHD(Request request) {
+		Response response = new Response()
+		char ip[] = request.params[0].value
+		char port[] = request.params[1].value
+		char idGen[] = request.params[2].value
+		DocStreamProxy proxy = new DocStreamProxy(ip, iu.intFromString(port), idGen)
+		gethd.gHD(proxy)
+		response.status = 1
+		response.value = ""
+		return response
+	}
+
+	Response interpretRequest(Request request) {
+		if (request.functionName == gHD_FUNC) {
+			return gHD(request)
+		} else {
+			Response response = new Response()
+			response.status = 2
+			response.value = ""
+			return response
+		}
+	}
+
+	Request parseRequest(char content[]) {
+		String helper[] = strUtil.explode(content, "!")
+		Request request = parser.jsonToData(helper[0].string, typeof(Request), null)
+		Request newRequest = new Request()
+		newRequest.numParams = request.numParams
+		newRequest.functionName = request.functionName
+		newRequest.params = new Param[newRequest.numParams]
+		for (int i = 0; i < newRequest.numParams; i++) {
+			newRequest.params[i] = new Param()
+			newRequest.params[i].value = helper[i+1].string
+		}
+		return newRequest
+	}
+
+	Request readRequest(TCPSocket s) {
+		Request request = null
+		char buf[] = null
+		int len = 0
+		char command[] = null
+		while ((buf = s.recv(1)).arrayLength > 0) {
+			command = new char[](command, buf)
+			len++
+			//stop condition
+			if (len >= 4) {
+				if ((command[len-4] == "\r") && (command[len-3] == "\r") &&
+					(command[len-2] == "\r") && (command[len-1] == "\r")) {
+					request = parseRequest(strUtil.subString(command,
+							0, command.arrayLength-4))
+					break
+				}
+			}
+		}
+		if (request == null) { s.disconnect() }
+		return request
+	}
+
+	void processRequest(TCPSocket s) {
+		Response response = new Response()
+		Request request = readRequest(s)
+		char content[]
+		if (request == null) {
+			response.status = 2
+			response.value = null
+		} else {
+			response = interpretRequest(request)
+		}
+		if (response.status == 3) { // gambiarra do list -- rever...
+			response.status = 2
+			char value[] = response.value
+			response.value = ""
+			content = new char[](parser.jsonFromData(response,null), "!", value, "\r\r\r\r")
+		} else {
+			content = new char[](parser.jsonFromData(response,null), "\r\r\r\r")
+		}
+		s.send(content)
+		s.disconnect()
+	}
+
+	void DistProxyHD:start(int port) {
+		out.println("DistProxyHD STARTED")
+		serviceStatus = true
+		host = new TCPServerSocket()
+		if (!host.bind(TCPServerSocket.ANY_ADDRESS, port)) {
+			out.println("Error: failed to bind master socket")
+			return
+		}
+		while (serviceStatus) {
+			TCPSocket client = new TCPSocket()
+			if (client.accept(host)) {
+				asynch::processRequest(client)
+			}
+		}
+	}
+}

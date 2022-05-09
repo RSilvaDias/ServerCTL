@@ -1,0 +1,16 @@
+component provides cache.Hash requires util.Math math {
+    int Hash:hash(char key[]) {
+      int hash = 0
+      int helper = 0
+      for (int i = 0; i < key.arrayLength; i++) {
+          hash += key[i]
+          hash = hash + (hash << 10)
+          hash = hash ^ (hash >> 6)
+      }
+      hash = hash + (hash << 3)
+      hash = hash ^ (hash >> 11)
+      hash = hash + (hash << 15)
+      helper = math.power(2, 8)
+      return hash % helper
+    }
+}
