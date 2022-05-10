@@ -1,0 +1,3 @@
+interface DocStreamProxy extends ws.DocStream {
+	DocStreamProxy(char ip[], int port, char id[])
+}

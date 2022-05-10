@@ -1,0 +1,7 @@
+ uses ws.DocStream
+ uses net.TCPSocket
+
+ interface DocStreamRP {
+	void associate(store DocStream s, char id[])
+	void processDocStream(TCPSocket s)
+ }

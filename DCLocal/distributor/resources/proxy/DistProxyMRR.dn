@@ -1,0 +1,3 @@
+interface DistProxyMRR {
+ void start(int port)
+}

@@ -1,0 +1,12 @@
+/* DataCollectorManager.dn Interface
+ *
+ * Author: Marcio P Sa - May @ 2018
+ * Changes: Roberto Rodrigues Filho - June @ 2020
+ */
+uses data.adt.HashTable
+uses ws.DocStream
+
+
+interface getHD {
+  void gHD(DocStream stream)
+}

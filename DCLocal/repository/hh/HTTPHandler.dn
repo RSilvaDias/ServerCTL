@@ -1,0 +1,117 @@
+const char debugMSG[] = "[@HTTPHandler]"
+const char SWC_PATH[] = "/swc/"
+
+component provides hh.HTTPHandler requires data.IntUtil intUtil, io.FileSystem fileSystem,
+	io.File, ws.DocStream, ws.Web web, data.adt.HashTable, encoding.Encoder:uri encoder,
+	data.StringUtil stringUtil {
+
+	char web_root[] = "./"
+
+ 	char[] getHeaderValue(Command cmd, char key[]) {
+		key = stringUtil.lowercase(key)
+		for (int i = 0; i < cmd.headers.arrayLength; i++) {
+			if (stringUtil.lowercase(cmd.headers[i].key) == key) {
+				return cmd.headers[i].value
+			}
+		}
+		return null
+	}
+
+	HashTable getParams(char resource[], char ex[]) {
+		HashTable result = new HashTable()
+		String dirs[] = stringUtil.explode(resource, "/")
+		String dirsEx[] = stringUtil.explode(ex, "/")
+		if (dirs.arrayLength != dirsEx.arrayLength) { return null }
+		for (int i = 0; i < dirs.arrayLength; i++) {
+			char key[] = stringUtil.subString(dirsEx[i].string, 1, dirsEx[i].string.arrayLength-2)
+			result.put(key, dirs[i])
+		}
+		return result
+	}
+
+	HashTable getQueryString(HashTable table, char path[]) {
+		String queryString[] = stringUtil.explode(path, "?")
+		if (queryString.arrayLength > 1) {
+			if (table == null) { table = new HashTable() }
+			String helper[] = stringUtil.explode(queryString[1].string, "&")
+			String keyValue[]
+			for (int count = 0; count < helper.arrayLength; count++) {
+				keyValue = stringUtil.explode(helper[count].string, "=")
+				table.put(keyValue[0].string, 
+					new String(encoder.decode(keyValue[1].string)))
+			}	
+		}
+		return table
+	}
+
+	HashTable getURLMaps(char command[], String exprs[]) {
+		if (exprs == null) { return null }
+		else {
+			for (int count = 0; count < exprs.arrayLength; count++) {
+				HashTable table = getParams(command, exprs[count].string)
+				if (table != null) { return table }
+			}
+		}
+		return null
+	}
+	
+	bool serveFunction_GET(DocStream ds, char path[], char command[]) {
+		return web.get(command, ds, getQueryString(getURLMaps(command, web.getURLPatterns()), command))
+	}
+	
+	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[]) {
+		return web.post(command, ctype, payload, ds, getURLMaps(command, web.getURLPatterns()))
+	}
+	
+	bool serveFile(char command[], TCPSocket s) {
+		char path[] = new char[](web_root, command)
+		if (fileSystem.exists(path)) {
+			File fd = new File(path, File.FILE_ACCESS_READ)
+			byte dat[] = fd.read(fd.getSize())
+			s.send("HTTP/1.1 200 OK\r\n")
+			s.send("Server: Dana Web Engine\r\n")
+			s.send("Connection: close\r\n")
+			s.send("Content-length: $(intUtil.intToString(fd.getSize()))\r\n")
+			s.send("\r\n")
+			fd.close()
+			s.send(dat)
+			return true
+		}	
+		return false
+	}
+	
+	bool staticFile(char command[]) {
+		if ((command.arrayLength >= SWC_PATH.arrayLength) && 
+			(stringUtil.subString(command, 0, SWC_PATH.arrayLength) == SWC_PATH)) {
+			return true
+		}
+		return false
+	}
+
+	void HTTPHandler:process(Command cmd, TCPSocket s) {
+		String resource = new String(cmd.resource)
+		char handler[]
+		bool success = false
+		if (staticFile(cmd.resource)) { success = serveFile(cmd.resource, s) }
+		else {
+			DocStream ds = new DocStream(s, cmd.headers, null)
+			if (cmd.type == Command.GET) { success = serveFunction_GET(ds, handler, resource.string) }
+			else if (cmd.type == Command.POST) {
+				//read the payload first
+				char ctype[] = getHeaderValue(cmd, "content-type")
+				int plen = intUtil.intFromString(getHeaderValue(cmd, "content-length"))
+				byte payload[] = s.recv(plen)
+				success = serveFunction_POST(ds, handler, resource.string, ctype, payload)
+			}
+			if (success) { ds.endStream() }
+		}
+		if (!success) {
+			s.send("HTTP/1.1 404 Resource Not Found\r\n")
+			s.send("Server: Dana Web Engine\r\n")
+			s.send("Connection: close\r\n")
+			s.send("Content-length: 0\r\n")
+			s.send("\r\n")
+		}
+		s.disconnect()
+	}
+}

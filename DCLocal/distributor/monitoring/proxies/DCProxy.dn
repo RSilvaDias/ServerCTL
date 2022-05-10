@@ -1,0 +1,57 @@
+const char debugMSG[] = "[@DCProxy]"
+
+component provides hh.HTTPHandler, monitoring.BeingMonitored requires monitoring.Container, 
+	monitoring.ResponseTime, hh.HTTPHandler hh, io.Output out, interceptor.TCPInterceptor {
+
+	static Container monitor
+
+	implementation BeingMonitored {
+		Event[] BeingMonitored:getEvents() {
+			if (monitor == null) { monitor = new Container() }
+			return monitor.getEvents()
+		}
+
+		Metric[] BeingMonitored:getMetrics() {
+			if (monitor == null) { monitor = new Container() }
+			return monitor.getMetrics()
+		}
+	
+		void BeingMonitored:turnMonitorOn() {
+			if (monitor == null) { monitor = new Container() }
+			monitor.turnMonitorOn()
+		}
+
+		void BeingMonitored:turnMonitorOff() {
+			if (monitor == null) { monitor = new Container() }
+			monitor.turnMonitorOff()
+		}
+	}
+
+	implementation HTTPHandler {
+		void HTTPHandler:process(Command cmd, TCPSocket s) {
+			if (monitor == null) {
+				monitor = new Container()
+				monitor.turnMonitorOn()
+			}
+			ResponseTime metric = new ResponseTime()
+			metric.start()
+			hh.process(cmd, s)
+			metric.finish()
+			int result = metric.result()
+			monitor.addMetric("response_time", result, false)
+			// defining environment feature values
+			char cacheControl[] = null
+			for (int i =0; i < cmd.headers.arrayLength; i++) {
+				if (cmd.headers[i].key == "cache-control") {
+					cacheControl = cmd.headers[i].value
+				}
+			}
+			if (cacheControl == null) { monitor.addEvent(cmd.resource, 1) }
+			else { 
+				monitor.addEvent(new char[](cmd.resource,
+					"+",
+					cacheControl), 1)
+			}
+		}
+	}
+}

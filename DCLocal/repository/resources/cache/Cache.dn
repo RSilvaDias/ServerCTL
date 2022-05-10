@@ -1,0 +1,21 @@
+uses time.DateTime
+
+data CacheItem {
+	char key[]
+	byte content[]
+	CacheItem chainNext
+	CacheItem evictionNext
+	CacheItem evictionPrior
+	DateTime timeStamp
+	int maxAge //in ms
+}
+
+interface Cache {
+	const int CACHE_MAX_SIZE = 1000 // 1kb
+	const int TABLE_SIZE = 300  // 
+	const int MAX_AGE = 5000 // in ms
+	byte[] get(char key[])
+	void insert(char key[], byte content[], int maxAge) //maxAge in seconds
+	void delete(char key[])
+	void deleteAll()
+}
