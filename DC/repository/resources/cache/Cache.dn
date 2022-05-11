@@ -11,8 +11,9 @@ data CacheItem {
 }
 
 interface Cache {
-	const int CACHE_MAX_SIZE = 1000000 // 1MB
-	const int TABLE_SIZE = 300
+    // 1kb was too little.
+	const int CACHE_MAX_SIZE = 10000 // 10kb
+	const int TABLE_SIZE = 300  // 
 	const int MAX_AGE = 5000 // in ms
 	byte[] get(char key[])
 	void insert(char key[], byte content[], int maxAge) //maxAge in seconds

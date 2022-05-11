@@ -63,7 +63,8 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
     }
     // RemoteFunction
 	void setupRemoteListsIPs() {
-		if (remoteListsIps == null) {
+		
+        if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[qtt]
             t.sleep(2000)
 			for ( int i = 0 ; i < qtt ; i++){
@@ -72,7 +73,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 			    remoteListsIps[i].ip = new char[](listip)
 			    remoteListsIps[i].port = 2010
             }
-        }		
+        }	
 	}
 
 	void sendMsgToRemoteDists(char msg[]) {
@@ -121,7 +122,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 
 	bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
 		if (!remoteObj.connect(addr.ip, addr.port)) {
-			out.println("Connection error!")
+            out.println("Connection error!")
 			return false
 		}
 		return true

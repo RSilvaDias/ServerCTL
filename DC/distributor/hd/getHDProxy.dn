@@ -168,7 +168,7 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
 		char idGen[] = idGenerator()
 		dcRp.associate(stream, idGen)
 		//TODO think about this msg format
-		char content2[] = new char[](requestStr, "!", "localhost!5011!", idGen, "\r\r\r\r")
+		char content2[] = new char[](requestStr, "!", "distributor!5011!", idGen, "\r\r\r\r")
 		Response response = makeRequest(content2)
 	}
 

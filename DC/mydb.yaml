@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: mydb
+  name: mydb
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: mydb
+  template:
+    metadata:
+      labels:
+        run: mydb
+    spec:
+      containers:
+      - command: 
+        image: mysql/mysql-server:8.0
+        name: mydb
+        ports:
+        - containerPort: 3306
+        env:
+          - name: POD_ID
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.uid
+          - name: MYSQL_ROOT_PASSWORD
+            value: root
+          - name: MYSQL_ROOT_HOST
+            value: "%"

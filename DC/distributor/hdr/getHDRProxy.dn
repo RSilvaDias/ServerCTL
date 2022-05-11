@@ -167,7 +167,7 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
 		char idGen[] = idGenerator()
 		dcRp.associate(stream, idGen)
 		//TODO think about this msg format
-		char content2[] = new char[](requestStr, "!", "localhost!5012!", idGen, "!", uuid, "\r\r\r\r")
+		char content2[] = new char[](requestStr, "!", "distributor!5012!", idGen, "!", uuid, "\r\r\r\r")
 		Response response = makeRequest(content2)
 	}
 

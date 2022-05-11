@@ -14,10 +14,12 @@
 const char debugMSG[] = "[@mostRecentDataResource]"
 
 component provides mrr.getMRR requires io.Output out,
-	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
+	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile,
+    cache.Cache cache {
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
+    char buff[]
 
 	MySQL getMySQL() {
 		MySQL mysql = null
@@ -33,11 +35,20 @@ component provides mrr.getMRR requires io.Output out,
 
 
 	void getMRR:gMRR(char uuid[], DocStream stream) {
-		queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data DESC LIMIT 1;"), stream)
+        char key[] = uuid
+        int maxAge = 5 // ms and s
+        char result[]
+        result = cache.get(key)
+        if (result == null ){
+		    buff = queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data DESC LIMIT 1;"), stream)
+            cache.insert(key,buff,maxAge)
+        }else{
+            stream.write(result)
+            //out.println("$(result)")
+        }
 	}
 
-	// implementing chunked transfer protocol
-	void queryExec(char query[], DocStream stream) {
+    char[] queryExec(char query[], DocStream stream) {
 		MySQL mysql
 		MySQLRow rows[]
 		mutex(lock) {
@@ -46,6 +57,7 @@ component provides mrr.getMRR requires io.Output out,
 			rows = mysql.fetchAll()
 		}
 		if (rows == null) {
+            buff = new char[](buff,"{\"error\": \"resource data not found\"}")
 			stream.write("{\"error\": \"resource data not found\"}")
 		} else {
 			stream.write("{ \"data\": [ ")
@@ -53,10 +65,12 @@ component provides mrr.getMRR requires io.Output out,
 				char helper[] = null
 				if (i != 0) { helper = ", " }
 				stream.write(new char[](helper, codifier.decode(rows[i].fields[1].value)))
+                buff = new char[](helper, codifier.decode(rows[i].fields[1].value))
 			}
 			stream.write("] }")
 		}
 		mysql.close()
 		//}
+        return buff
 	}
 }

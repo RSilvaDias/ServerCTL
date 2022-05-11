@@ -14,10 +14,12 @@
 const char debugMSG[] = "[@mostRecentData]"
 
 component provides mr.getMR requires io.Output out,
-	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile {
+	data.json.JSONEncoder encoder, encoding.Encoder:uri codifier, data.mysql.MySQL, util.ConfigFile,
+    cache.Cache cache{
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
+    char buff[]
 
 	MySQL getMySQL() {
 		MySQL mysql = null
@@ -32,11 +34,21 @@ component provides mr.getMR requires io.Output out,
 	}
 
 	void getMR:gMR(DocStream stream) {
-		queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
-	}
+        char key[] = 1
+        int maxAge = 5
+        char result[]
+        result = cache.get(key)
+        out.println("$(result)")
+        if (result == null ){
+		    buff = queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
+            cache.insert(key,buff,maxAge)
+        }else{
+            stream.write(result)
+        }
+    }
 
 	// implementing chunked transfer protocol
-	void queryExec(char query[], DocStream stream) {
+	char[] queryExec(char query[], DocStream stream) {
 		MySQL mysql
 		MySQLRow rows[]
 		mutex(lock) {
@@ -45,6 +57,7 @@ component provides mr.getMR requires io.Output out,
 			rows = mysql.fetchAll()
 		}
 		if (rows == null) {
+            buff = new char[](buff,"{\"error\": \"resource data not found\"}")
 			stream.write("{\"error\": \"resource data not found\"}")
 		} else {
 			stream.write("{ \"data\": [ ")
@@ -52,10 +65,12 @@ component provides mr.getMR requires io.Output out,
 				char helper[] = null
 				if (i != 0) { helper = ", " }
 				stream.write(new char[](helper, codifier.decode(rows[i].fields[1].value)))
+                buff = new char[](helper, codifier.decode(rows[i].fields[1].value))
 			}
 			stream.write("] }")
 		}
 		mysql.close()
 		//}
+        return buff
 	}
 }

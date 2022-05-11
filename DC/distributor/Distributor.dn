@@ -27,6 +27,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		out.println(" $(MRR) - to distribute getMRR")
 		out.println(" $(HD) - to distribute getHD")
 		out.println(" $(HDR) - to distribute getHDR")
+        out.println(" $(PERCEPTION) - to get Perception Data")
 		out.println(" $(LOCAL) - to bring list locally")
 		out.println(" $(EXIT) - to finish execution")
 	}
@@ -182,7 +183,10 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                         t.sleep(10000)
                         out.println("$(debugMSG) Remote composition [(hdr/getHDRProxy.o)] running.")
                         //distribute("hdr/getHDRProxy.o")
-					} else {
+                    }else if(cmd == PERCEPTION){
+                        out.println("PERCEPTION DATA : ")
+                        out.println("$(perception.getPerceptionData())")
+                    } else {
 						out.println("Invalid command.")
 					}
 				}
@@ -235,8 +239,10 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		perception = new Perception(true)
 		/* Loading target system and adding a monitoring proxy to it */
 		perception.setMain("../repository/TCPNetwork.o", null)
-
-    String configs[] = perception.getAllConfigs()
+        out.println("$(debugMSG) Adding Monitoring Proxy...")
+        perception.addProxy("|../distributor/monitoring/proxies/DCProxy.o|*(*:hh.HTTPHandler[0]:*)|")
+        out.println("$(debugMSG) Proxy added!")
+        String configs[] = perception.getAllConfigs()
 		/*for (int i = 0; i < configs.arrayLength; i++) {
 			out.println("$(debugMSG) $(iu.intToString(i+1)): $(configs[i].string)")
 		}*/
