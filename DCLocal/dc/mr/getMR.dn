@@ -41,7 +41,7 @@ component provides mr.getMR requires io.Output out,
         out.println("$(result)")
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
-            cache.insert(key,buff,maxAge)
+            cache.insert(key,buff)
         }else{
             stream.write(result)
         }

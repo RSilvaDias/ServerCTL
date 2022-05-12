@@ -104,12 +104,15 @@ component provides proxy.DocStreamRP requires io.Output out, data.IntUtil iu, ne
 		} else {
 			response = interpretRequest(request)
 		}
+        
 		if (response.status == 3) {
+            
 			response.status = 2
 			char value[] = response.value
 			response.value = ""
 			content = new char[](parser.jsonFromData(response,null), "!", value, "\r\r\r\r")
 		} else {
+            
 			content = new char[](parser.jsonFromData(response,null), "\r\r\r\r")
 		}
 		s.send(content)

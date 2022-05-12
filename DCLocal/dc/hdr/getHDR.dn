@@ -43,7 +43,7 @@ component provides hdr.getHDR requires io.Output out,
 
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data;"), stream)
-            cache.insert(key,buff,maxAge)
+            cache.insert(key,buff)
         }else{
             stream.write(result)
         }

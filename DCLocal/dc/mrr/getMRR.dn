@@ -41,7 +41,7 @@ component provides mrr.getMRR requires io.Output out,
         result = cache.get(key)
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data DESC LIMIT 1;"), stream)
-            cache.insert(key,buff,maxAge)
+            cache.insert(key,buff)
         }else{
             stream.write(result)
             //out.println("$(result)")

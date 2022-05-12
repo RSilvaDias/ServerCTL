@@ -43,7 +43,7 @@ component provides hd.getHD requires io.Output out,
 
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)
-            cache.insert(key,buff,maxAge)
+            cache.insert(key,buff)
         }else{
             stream.write(result)
         }

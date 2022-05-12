@@ -13,7 +13,8 @@ const char EXIT[]       = "exit"
 
 
 component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in,
-	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du, time.Timer t,serverctl.Serverctl SCTL{
+	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du,time.DateUtil dateUtil, time.Timer t,
+    serverctl.Serverctl SCTL{
 
 	String remoteConfigs[] 		= null
 	String localConfigs[] 		= null
@@ -80,6 +81,48 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 			out.println("$(debugMSG) $(du.decToString(getAvgResponseTime()))")
 		}
 	}
+
+    bool match(char path[], char expr[]) {
+		String helper[] = strUtil.explode(path, "?")
+		String dirs[] = strUtil.explode(helper[0].string, "/")
+		String exprDirs[] = strUtil.explode(expr, "/")
+		if (dirs.arrayLength != exprDirs.arrayLength) { return false }
+		for (int i = 0; i < exprDirs.arrayLength; i++) {
+			if ((dirs[i].string != exprDirs[i].string) && (exprDirs[i].string != "*")) {
+				return false
+			}
+		}
+		return true
+	}
+
+    void Performance(){
+        int MMRcount = 0
+        int MMRresult = 0
+        char aux[] = perception.getPerceptionData()
+        PerceptionData pData[] = new PerceptionData()
+        pData = encoder.jsonToArray(aux,typeof(pData),null)
+        //out.println("$(encoder.jsonFromArray(pData,null))")
+        
+        out.println("pData size : $(pData.arrayLength)")
+        out.println("pData metric number : $(iu.makeString(pData[0].metrics.arrayLength))")
+        
+        for ( int i = 0 ; i < pData[0].events.arrayLength ; i++){
+            //out.println("Event type : $(pData[0].events[i].type)")
+            char path[] = pData[0].events[i].type 
+            DateTime dt1 = pData[0].events[i].started
+	        DateTime dt2 = pData[0].events[i].finished
+            int result = dateUtil.toMilliseconds(dateUtil.diff(dt1, dt2))
+            if (match(path, "/collector/resources/*/data/last")){                
+                MMRcount++
+                MMRresult += result 
+            }
+        }
+        int MMRfinal = 0
+        if (MMRcount != 0){ MMRfinal = MMRresult / MMRcount  }
+        out.println("Performance MMR : $(MMRfinal)")
+        // Parse events, calculate performance for each component (mr , mrr , hd , hdR)
+    }
+
 
 	void commandInterpret(char cmd[]) {
 		String cmdList[] = strUtil.explode(cmd, " ")
@@ -184,9 +227,8 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                         out.println("$(debugMSG) Remote composition [(hdr/getHDRProxy.o)] running.")
                         //distribute("hdr/getHDRProxy.o")
                     }else if(cmd == PERCEPTION){
-                        out.println("PERCEPTION DATA : ")
-                        out.println("$(perception.getPerceptionData())")
-                        
+                        out.println("****   TESTING    ************")
+                        Performance() 
                     } else {
 						out.println("Invalid command.")
 					}
