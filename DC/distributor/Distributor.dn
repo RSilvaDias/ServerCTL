@@ -253,7 +253,6 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		int count = 0
 		PerceptionData pD[] = encoder.jsonToArray(perceptionData, typeof(PerceptionData[]), null)
 		if (((pD != null) && (pD.arrayLength > 0)) && (pD[0].metrics.arrayLength > 0)) {
-			result = new char[]("[ "," ] - ")
 			value = pD[0].metrics[0].value
 			count = pD[0].metrics[0].counter
 			dec metricValue = value/count
