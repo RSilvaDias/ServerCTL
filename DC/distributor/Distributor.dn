@@ -4,21 +4,23 @@ const char HELP[]       = "help"
 const char CREATE[]     = "create"
 const char LOCAL[]      = "local"
 const char PERCEPTION[] = "perception"
-const char TEST[]				= "test"
-const char MR[]					= "mr"
-const char MRR[]				= "mrr"
-const char HD[]					= "hd"
-const char HDR[]				= "hdr"
+const char TEST[]		= "test"
+const char MR[]			= "mr"
+const char MRR[]		= "mrr"
+const char HD[]			= "hd"
+const char HDR[]		= "hdr"
 const char EXIT[]       = "exit"
 
 
-component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in,
-	monitoring.Perception, data.json.JSONEncoder encoder, data.DecUtil du, time.Timer t,serverctl.Serverctl SCTL{
+component provides App requires io.Output out, data.StringUtil strUtil, data.IntUtil iu, io.Input in,io.TextFile,
+	monitoring.Perception, data.json.JSONEncoder encoder,data.json.JSONParser parser,
+     data.DecUtil du, time.Timer t,serverctl.Serverctl SCTL{
 
 	String remoteConfigs[] 		= null
 	String localConfigs[] 		= null
 	String distributedProxies[] = null
 	Perception perception 		= null
+    String configsStr[] = null
 
 	void help() {
 		out.println("Command list:")
@@ -29,6 +31,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		out.println(" $(HDR) - to distribute getHDR")
         out.println(" $(PERCEPTION) - to get Perception Data")
 		out.println(" $(LOCAL) - to bring list locally")
+        out.println(" $(TEST) - to start cycles of testing")
 		out.println(" $(EXIT) - to finish execution")
 	}
 
@@ -186,6 +189,46 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                     }else if(cmd == PERCEPTION){
                         out.println("PERCEPTION DATA : ")
                         out.println("$(perception.getPerceptionData())")
+                    } else if (cmd == TEST) {
+                        int observationWindow = 0
+                        int numberOfCycles = 0
+                        char resultFileName[] = null
+                        char allConfigsOp[] = null
+                        out.println("$(debugMSG) Test setup!\n$(debugMSG) Please provide the number of test cycles:")
+                        out.print(" test> ")
+                        numberOfCycles = iu.intFromString(in.readln())
+                        out.println("$(debugMSG) Observation window size (ms):")
+                        out.print(" test> ")
+                        observationWindow = iu.intFromString(in.readln())
+                        out.println("$(debugMSG) Name of output file:")
+                        out.print(" test> ")
+                        resultFileName = in.readln()
+                        out.println("$(debugMSG) All configs? [y/n]")
+                        out.print(" test> ")
+                        allConfigsOp = in.readln()
+                        if (allConfigsOp == "y") { configsStr = perception.getAllConfigs() }
+                        else {
+                             out.println("$(perception.getConfig())")
+                             configsStr = new String[](new String(perception.getConfig()))
+                             
+                             }
+                        out.print("$(debugMSG) All setup. Press [ENTER] to start test")
+                        in.readln()
+                        out.println("$(debugMSG) Starting test...")
+                        TextFile outF = new TextFile(resultFileName, File.WRITE)
+                        for (int confCount = 0; confCount < configsStr.arrayLength; confCount++) {
+                            perception.setConfig(configsStr[confCount].string)
+                            out.println("$(debugMSG) Config: $(getVariant(configsStr[confCount].string))")
+                            outF.writeLine(new char[]("config, ", getVariant(configsStr[confCount].string)))
+                            perception.getPerceptionData()
+                            for (int i = 0; i < numberOfCycles; i++) {
+                                t.sleep(observationWindow)
+                                handlePerception(perception.getPerceptionData(), outF)
+                            }
+                            if (configsStr.arrayLength > 1) { outF.writeLine("\n\n") }
+                        }
+                        outF.close()
+                        out.println("$(debugMSG) Test finished.")
                     } else {
 						out.println("Invalid command.")
 					}
@@ -199,6 +242,38 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 			}
 		}
 		return null
+	}
+    void handlePerception(char perceptionData[], TextFile file) {
+		if (perceptionData == "{}") {
+			out.println("$(debugMSG) No perception data.")
+			return
+		}
+		char result[] = ""
+		dec value = 0
+		int count = 0
+		PerceptionData pD[] = encoder.jsonToArray(perceptionData, typeof(PerceptionData[]), null)
+		if (((pD != null) && (pD.arrayLength > 0)) && (pD[0].metrics.arrayLength > 0)) {
+			result = new char[]("[ "," ] - ")
+			value = pD[0].metrics[0].value
+			count = pD[0].metrics[0].counter
+			dec metricValue = value/count
+			result = new char[](result, pD[0].metrics[0].name, ": ", du.decToString(metricValue), " ms")
+			out.println("$(debugMSG) $(result)")
+            if (file != null) { file.writeLine("$(debugMSG) $(result)") }
+		} else {
+			out.println("$(debugMSG) No perception data.")
+		}
+	}
+
+    char[] getVariant(char config[]) {
+		String helper[] = strUtil.explode(config, "|")
+		helper = strUtil.explode(helper[0].string, ",")
+		for (int i = 0; i < helper.arrayLength; i++) {
+			if (strUtil.find(helper[i].string, "../dc/ws/NFRP") != StringUtil.NOT_FOUND) {
+				return helper[i].string
+			}
+		}
+		return config
 	}
 
 	// Guess there's a better way of doing this...
