@@ -1,0 +1,21 @@
+config, ../dc/ws/NFRProxy.o
+[@Distributor] [  ] - response_time: 21.9122807017543859649 ms
+[@Distributor] [  ] - response_time: 26.258064516129032258 ms
+[@Distributor] [  ] - response_time: 26.03125 ms
+[@Distributor] [  ] - response_time: 25.3174603174603174603 ms
+[@Distributor] [  ] - response_time: 26.015873015873015873 ms
+[@Distributor] [  ] - response_time: 25.46875 ms
+[@Distributor] [  ] - response_time: 24.7301587301587301587 ms
+[@Distributor] [  ] - response_time: 26.3650793650793650793 ms
+[@Distributor] [  ] - response_time: 26.095238095238095238 ms
+[@Distributor] [  ] - response_time: 25.3015873015873015873 ms
+[@Distributor] [  ] - response_time: 26.7096774193548387096 ms
+[@Distributor] [  ] - response_time: 25.40625 ms
+[@Distributor] [  ] - response_time: 25.129032258064516129 ms
+[@Distributor] [  ] - response_time: 25.6984126984126984126 ms
+[@Distributor] [  ] - response_time: 24.6825396825396825396 ms
+[@Distributor] [  ] - response_time: 26.5645161290322580645 ms
+[@Distributor] [  ] - response_time: 25.03125 ms
+[@Distributor] [  ] - response_time: 26.079365079365079365 ms
+[@Distributor] [  ] - response_time: 26.7142857142857142857 ms
+[@Distributor] [  ] - response_time: 26.079365079365079365 ms

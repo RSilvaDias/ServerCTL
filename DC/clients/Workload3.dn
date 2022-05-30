@@ -1,0 +1,27 @@
+// high entropy low volume of data
+// sequencial testing {1,2,3,4,5,...,50}
+// Using Historical Data Resource entrypoint - HDR
+
+component provides App requires io.Output out, net.http.HTTPRequest request, 
+	data.IntUtil iu, time.Calendar ic, time.DateUtil dateUtil {
+	int App:main(AppParam params[]) {
+		int id = 0
+		while(true) {
+			id++
+			if (id > 50) { id = 1 }
+			char url[] = new char[]("34.121.20.15:8081/collector/resources/", iu.intToString(id), "/data")
+            //char url[] = new char[]("localhost:8080/collector/resources/", iu.intToString(id), "/data")
+			DateTime dt1 = null
+			DateTime dt2 = null
+			int result = 0
+			dt1 = ic.getTime()
+			HTTPResponse response = request.get(url, null)
+			dt2 = ic.getTime()
+			if ((dt1 != null) && (dt2 != null)) {
+				result = dateUtil.toMilliseconds(dateUtil.diff(dt1, dt2))
+			}
+			out.println("MMR - id : $(iu.intToString(id)) , response time: $(iu.intToString(result)) ms")
+		}
+		return 0
+	}
+}
