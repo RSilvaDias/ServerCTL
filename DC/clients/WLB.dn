@@ -1,0 +1,52 @@
+const char debugMSG[] = "[@Server]"
+
+//TODO: refactor -- a lot of code repeating itself.
+component provides App requires io.Output out, data.IntUtil intUtil, net.TCPSocket, 
+	net.TCPServerSocket, data.StringUtil strUtil, io.TextFile, time.DateUtil dateUtil,
+	time.Calendar ic, net.http.HTTPRequest request, util.RandomInt ranInt, time.Timer t {
+
+	int id = 1
+	//char SERVERADDR[] = "34.69.215.148:2020"
+	//char SERVERADDR[] = "localhost:8080"
+    // DIstributor external ip 34.121.20.15
+    char SERVERADDR[] = "34.121.20.15:8081"
+
+	void execute(char url[]) {
+		//Header header[] = new Header[](new Header("Cache-Control", new char[]("max-age=1")))
+        Header header[] = new Header[](new Header("Cache-Control"))
+		HTTPResponse response = request.get(url, header)
+		/*out.println("$url")*/
+		t.sleep(80)
+	}
+
+	void threadExec(int numThread) {
+		DateTime dt1 = null
+		DateTime dt2 = null
+		int result = 0
+		char url[]
+		dt1 = ic.getTime()
+		Thread thread[] = new Thread[numThread]
+		for (int i = 0; i < numThread; i++) {
+			url = new char[](SERVERADDR, "/collector/resources/", intUtil.intToString(id), "/data/last")
+			thread[i] = asynch::execute(url)
+			id++
+			if (id > 101) { id = 1 }
+		}
+		for (int i = 0; i < numThread; i++) {
+			thread[i].join()
+		}
+		dt2 = ic.getTime()
+		if ((dt1 != null) && (dt2 != null)) {
+			result = dateUtil.toMilliseconds(dateUtil.diff(dt1, dt2))
+			out.println("$(intUtil.intToString(result))")
+		}
+	}
+
+	int App:main(AppParam params[]) {
+		while (true) {
+			asynch::threadExec(10)
+			t.sleep(1000)
+		}
+		return 0
+	}
+}
