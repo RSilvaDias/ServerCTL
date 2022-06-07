@@ -19,6 +19,7 @@ component provides mrr.getMRR requires io.Output out,
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
+    static Mutex lock2 = new Mutex()
     char buff[]
 
 	MySQL getMySQL() {
@@ -38,10 +39,14 @@ component provides mrr.getMRR requires io.Output out,
         char key[] = uuid
         int maxAge = 5 // ms and s
         char result[]
-        result = cache.get(key)
+        mutex(lock2){
+            result = cache.get(key)
+        }
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data DESC LIMIT 1;"), stream)
-            cache.insert(key,buff,maxAge)
+            mutex(lock2){
+                cache.insert(key,buff,maxAge)
+            }
         }else{
             stream.write(result)
             //out.println("$(result)")

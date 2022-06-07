@@ -19,6 +19,7 @@ component provides mr.getMR requires io.Output out,
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
+    static Mutex lock2 = new Mutex()
     char buff[]
 
 	MySQL getMySQL() {
@@ -37,11 +38,16 @@ component provides mr.getMR requires io.Output out,
         char key[] = 1
         int maxAge = 5
         char result[]
-        result = cache.get(key)
+        
+        mutex(lock2){
+            result = cache.get(key)
+        }
         out.println("$(result)")
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * from (SELECT *, row_number() OVER(PARTITION BY uuid ORDER BY id_data) AS rowCount FROM data) AS a WHERE rowCount = 1 ORDER BY id_data;"), stream)
-            cache.insert(key,buff,maxAge)
+            mutex(lock2){
+                cache.insert(key,buff,maxAge)
+            }
         }else{
             stream.write(result)
         }

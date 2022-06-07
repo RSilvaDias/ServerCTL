@@ -19,6 +19,7 @@ component provides hdr.getHDR requires io.Output out,
 
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
+    static Mutex lock2 = new Mutex()
     static Cache cache = null
     char buff[]
 
@@ -39,11 +40,15 @@ component provides hdr.getHDR requires io.Output out,
         char key[] = uuid
         int maxAge = 5
         char result[]
-        result = cache.get(key)
+        mutex(lock2){
+            result = cache.get(key)
+        }
 
         if (result == null ){
 		    buff = queryExec(new char[]("SELECT * FROM data WHERE uuid = \"", uuid, "\" ORDER BY id_data;"), stream)
-            cache.insert(key,buff,maxAge)
+            mutex(lock2){
+                cache.insert(key,buff,maxAge)
+            }
         }else{
             stream.write(result)
         }
