@@ -1,24 +1,13 @@
 // Least Recently Used (LRU) Cache Component
-//
-// Please note:
-//  * this componeont is not thread safe
-//  * this component is not optimised for memory efficiency
-//  * this component implements the classical hashtable with chaining
-//  * this component does not implement cached item expiration
-//  * we also consider that the size of the cached item is never bigger than CACHE_MAX_SIZE
-// Comments:
-//  * I wonder whether garbage collector is working with this implementation
-// and preventing memory leak
-//
-// Author: Roberto Rodrigues Filho
-// Date: December, 2019
+// Cache Extended for Remote distribution
+
 
 component provides cache.Cache requires cache.Hash hashFunc, io.Output out, 
 	time.DateUtil dateUtil, time.Calendar calendar {
 	
 	CacheItem table[] = new CacheItem[Cache.TABLE_SIZE]
 	int cacheSize = 0
-    const int CACHE_MAX_SIZE = 1000 // 1kb
+    const int CACHE_MAX_SIZE = 10000 // 10kb
 
 	// ----- managing eviction queue
 	CacheItem mru = null // tail

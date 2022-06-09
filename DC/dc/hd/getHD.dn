@@ -20,6 +20,7 @@ component provides hd.getHD requires io.Output out,
 	static ConfigFile configFile = null
 	static Mutex lock = new Mutex()
     static Mutex lock2 = new Mutex()
+    static Mutex global = new Mutex()
     static Cache cache = null
     char buff[]
 
@@ -39,18 +40,20 @@ component provides hd.getHD requires io.Output out,
 	void getHD:gHD(DocStream stream) {
         char key[] = 1
         int maxAge = 5
-        char result[]
-        mutex(lock2){
-            result = cache.get(key)
-        }
-
-        if (result == null ){
-		    buff = queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)
+        mutex(global){
+            char result[]
             mutex(lock2){
-                cache.insert(key,buff,maxAge)
+                result = cache.get(key)
             }
-        }else{
-            stream.write(result)
+
+            if (result == null ){
+                buff = queryExec(new char[]("SELECT * FROM data ORDER BY id_data;"), stream)
+                mutex(lock2){
+                    cache.insert(key,buff,maxAge)
+                }
+            }else{
+                stream.write(result)
+            }
         }
 	}
 

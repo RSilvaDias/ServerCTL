@@ -36,8 +36,17 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 	}
 
 	void local() {
-		perception.setConfig(localConfigs[0].string)
+        int j
+        for ( int i = 0 ; i < localConfigs.arrayLength; i++){
+            if ((strUtil.ifind(localConfigs[i].string,"cache/CacheLRU.o") != StringUtil.NOT_FOUND) &&
+               (strUtil.ifind(localConfigs[i].string,"cache/CacheExtended.o") == StringUtil.NOT_FOUND)){
+                j = i
+            }
+        }    
+		perception.setConfig(localConfigs[j].string)
 		out.println("$(debugMSG) Local composition running.")
+        out.println("$(localConfigs[j].string)")
+        out.println(" ")
 	}
 
 	void distribute(char proxyInterface[]) {
@@ -105,7 +114,9 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") != StringUtil.NOT_FOUND ) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
-                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
                                     j = iu.makeString(i)
@@ -131,7 +142,9 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") != StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
-                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
                                     j = iu.makeString(i)
@@ -153,7 +166,9 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") != StringUtil.NOT_FOUND) &&
-                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND)){
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
                                     j = iu.makeString(i)
@@ -174,7 +189,9 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
-                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") != StringUtil.NOT_FOUND)){
+                                (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") != StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
 									out.println("$(i) - $(remoteConfigs[i].string)")
 									out.println(" ")
                                     j = iu.makeString(i)
@@ -253,6 +270,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		int count = 0
 		PerceptionData pD[] = encoder.jsonToArray(perceptionData, typeof(PerceptionData[]), null)
 		if (((pD != null) && (pD.arrayLength > 0)) && (pD[0].metrics.arrayLength > 0)) {
+			result = new char[]("[ "," ] - ")
 			value = pD[0].metrics[0].value
 			count = pD[0].metrics[0].counter
 			dec metricValue = value/count
