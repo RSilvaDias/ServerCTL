@@ -24,8 +24,7 @@ data IPAddr {
 
 const char gMR_FUNC[]   = "gMR"
 const char LOCALHOST[] 	= "localhost"
-const char remoteone[]  = "mr0"
-const char remotetwo[]  = "mr1"
+
 
 
 component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser, net.TCPSocket,
@@ -36,6 +35,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 	IPAddr remoteListsIps[] = null
 	Mutex remoteListsIpsLock = new Mutex()
 	Mutex idLock = new Mutex()
+    Mutex lock2 = new Mutex()
 	bool flagDocStream = true
 	TCPServerSocket sDocStream = null
 
@@ -51,7 +51,7 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
             int q1 = SCTL.get_mr()
             qtt = q1
             remoteDistsIps = new IPAddr[q1]
-            t.sleep(5000)
+            t.sleep(4500)
             for (int i = 0; i < q1 ; i++){
                 remoteDistsIps[i] = new IPAddr()
                 char nameip[] = "$name$(iu.makeString(i))"
@@ -63,16 +63,16 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
     }
     // RemoteFunction
 	void setupRemoteListsIPs() {
-		
+		mutex(lock2){
         if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[qtt]
-            t.sleep(2000)
 			for ( int i = 0 ; i < qtt ; i++){
                 remoteListsIps[i] = new IPAddr()
                 char listip[] = "$name$(iu.makeString(i))"
 			    remoteListsIps[i].ip = new char[](listip)
 			    remoteListsIps[i].port = 2010
             }
+        }
         }	
 	}
 
@@ -152,25 +152,12 @@ component provides mr.getMR(AdaptEvents) requires  data.json.JSONEncoder parser,
 		return connectAndSend(addr, content, true)
 	}
 
-	char[] idGenerator() {
-		/*int genId = 0
-		mutex(idLock) {
-			genId = iu.makeString(++id)
-		}
-		return genId*/
-		mutex(idLock) {
-			id++
-			return iu.makeString(id)
-		}
-	}
-
 	void getMR:gMR(DocStream stream) {
 		Request request = new Request()
 		request.functionName = gMR_FUNC
 		request.numParams = 3 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
-		char idGen[] = idGenerator()
-		dcRp.associate(stream, idGen)
+		char idGen[] = dcRp.associate(stream)
 		//TODO think about this msg format
 		char content2[] = new char[](requestStr, "!", "distributor!5011!", idGen, "\r\r\r\r")
 		Response response = makeRequest(content2)

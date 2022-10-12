@@ -34,11 +34,11 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
 	IPAddr remoteListsIps[] = null
 	Mutex remoteListsIpsLock = new Mutex()
 	Mutex idLock = new Mutex()
+    Mutex lock2 = new Mutex()
 	bool flagDocStream = true
 	TCPServerSocket sDocStream = null
 
 	int pointer = 0
-	int id = 0
     char name[] = "mrr"
     int qtt = 0
 
@@ -48,7 +48,11 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
             int q1 = SCTL.get_mrr()
             qtt = q1
             remoteDistsIps = new IPAddr[q1]
+            // this sleep is required to avoid connection errors with the pods
+            // must find a way to eliminate it.
+            // anything below 4000 returns connection error.
             t.sleep(5000)
+
             for (int i = 0; i < q1 ; i++){
                 remoteDistsIps[i] = new IPAddr()
                 char nameip[] = "$name$(iu.makeString(i))"
@@ -60,9 +64,10 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
     }
     // RemoteFunction
 	void setupRemoteListsIPs() {
-		if (remoteListsIps == null) {
+		mutex(lock2){
+        if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[qtt]
-            t.sleep(2000)
+            // sleep 
 			for ( int i = 0 ; i < qtt ; i++){
                 remoteListsIps[i] = new IPAddr()
                 char listip[] = "$name$(iu.makeString(i))"
@@ -70,6 +75,7 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
 			    remoteListsIps[i].port = 2010
             }
         }		
+        }
 	}
 
 	void sendMsgToRemoteDists(char msg[]) {
@@ -117,7 +123,9 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
 	}
 
 	bool establishConnection(IPAddr addr, TCPSocket remoteObj) {
-		if (!remoteObj.connect(addr.ip, addr.port)) {
+		if(remoteObj == null ){ out.println("remoteOBJ null") }
+        if(addr == null){out.println("addr null")}
+        if (!remoteObj.connect(addr.ip, addr.port)) {
 			out.println("Connection error!")
 			return false
 		}
@@ -148,25 +156,12 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
 		return connectAndSend(addr, content, true)
 	}
 
-	char[] idGenerator() {
-		/*int genId = 0
-		mutex(idLock) {
-			genId = iu.makeString(++id)
-		}
-		return genId*/
-		mutex(idLock) {
-			id++
-			return iu.makeString(id)
-		}
-	}
-
 	void getMRR:gMRR(char uuid[],DocStream stream) {
 		Request request = new Request()
 		request.functionName = gMRR_FUNC
 		request.numParams = 4 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
-		char idGen[] = idGenerator()
-		dcRp.associate(stream, idGen)
+		char idGen[] = dcRp.associate(stream)
 		//TODO think about this msg format
 		char content2[] = new char[](requestStr, "!", "distributor!5012!", idGen, "!", uuid, "\r\r\r\r")
 		Response response = makeRequest(content2)
@@ -194,6 +189,7 @@ component provides mrr.getMRR(AdaptEvents) requires  data.json.JSONEncoder parse
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
+
 		char msg[] = new char[]("../distributor/RemoteMRR.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 		// server

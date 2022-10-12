@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: distributor
-        image: docker.io/rsdias/fapesp:dist1k
+        image: docker.io/rsdias/fapesp:distributor
         imagePullPolicy: Always
         ports:
         - containerPort: 8081

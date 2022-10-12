@@ -34,11 +34,11 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
 	IPAddr remoteListsIps[] = null
 	Mutex remoteListsIpsLock = new Mutex()
 	Mutex idLock = new Mutex()
+    Mutex lock2 = new Mutex()
 	bool flagDocStream = true
 	TCPServerSocket sDocStream = null
 
 	int pointer = 0
-	int id = 0
     char name[] = "hd"
     int qtt = 0
 
@@ -48,7 +48,7 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
             int q1 = SCTL.get_hd()
             qtt = q1
             remoteDistsIps = new IPAddr[q1]
-            t.sleep(5000)
+            t.sleep(4500)
             for (int i = 0; i < q1 ; i++){
                 remoteDistsIps[i] = new IPAddr()
                 char nameip[] = "$name$(iu.makeString(i))"
@@ -60,9 +60,10 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
     }
     // RemoteFunction
 	void setupRemoteListsIPs() {
-		if (remoteListsIps == null) {
+		mutex(lock2){
+        if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[qtt]
-            t.sleep(2000)
+            
 			for ( int i = 0 ; i < qtt ; i++){
                 remoteListsIps[i] = new IPAddr()
                 char listip[] = "$name$(iu.makeString(i))"
@@ -70,6 +71,7 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
 			    remoteListsIps[i].port = 2010
             }
         }		
+        }
 	}
 
 	void sendMsgToRemoteDists(char msg[]) {
@@ -148,27 +150,16 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
 		return connectAndSend(addr, content, true)
 	}
 
-	char[] idGenerator() {
-		/*int genId = 0
-		mutex(idLock) {
-			genId = iu.makeString(++id)
-		}
-		return genId*/
-		mutex(idLock) {
-			id++
-			return iu.makeString(id)
-		}
-	}
 
 	void getHD:gHD(DocStream stream) {
+        out.println("[[[[ get HD ]]]]")
 		Request request = new Request()
 		request.functionName = gHD_FUNC
 		request.numParams = 3 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
-		char idGen[] = idGenerator()
-		dcRp.associate(stream, idGen)
+		char idGen[] = dcRp.associate(stream)
 		//TODO think about this msg format
-		char content2[] = new char[](requestStr, "!", "distributor!5011!", idGen, "\r\r\r\r")
+		char content2[] = new char[](requestStr, "!", "distributor!5013!", idGen, "\r\r\r\r")
 		Response response = makeRequest(content2)
 	}
 
@@ -194,6 +185,7 @@ component provides hd.getHD(AdaptEvents) requires  data.json.JSONEncoder parser,
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
+        out.println(" *****active HDProxy ***")
 		char msg[] = new char[]("../distributor/RemoteHD.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 		// server

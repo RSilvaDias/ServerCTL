@@ -29,12 +29,14 @@ component provides proxy.DocStreamRP requires io.Output out, data.IntUtil iu, ne
 	net.TCPServerSocket, data.json.JSONEncoder parser, data.StringUtil strUtil  {
 
 	Associate associate[]
+    static Mutex lock3 = new Mutex()
+    int id = 0
 
 	Response writeFunc(Request request) {
 		Response response = null
 		for (int i = 0; i < associate.arrayLength; i++) {
-			if (associate[i].id == request.params[1].value) {
-				response = new Response()
+            if (associate[i].id == request.params[1].value) {
+                response = new Response()
 				associate[i].ds.write(request.params[0].value)
 				response.status = 1
 				response.value = ""
@@ -42,7 +44,11 @@ component provides proxy.DocStreamRP requires io.Output out, data.IntUtil iu, ne
 			}
 		}
 		if (response == null) {
-			out.println("$(debugMSG) No associate id found in response.")
+			out.println(" ########## $(debugMSG) No associate id found in response. ##################\n")
+            out.println(" Request param value : [[$(request.params[1].value)]] - TESTE ")
+            for (int i = 0; i < associate.arrayLength; i++) {
+                out.println(" id  - [[$(associate[i].id)]] - TESTE2")
+            }
 		}
 		return response
 	}
@@ -117,7 +123,13 @@ component provides proxy.DocStreamRP requires io.Output out, data.IntUtil iu, ne
 	}
 
 	// update this to use a HashTable
-	void DocStreamRP:associate(DocStream s, char id[]) {
-		associate = new Associate[](associate, new Associate(s, id))
+	char[] DocStreamRP:associate(DocStream s) {
+        mutex(lock3){
+            char idGen[]
+            id++
+            idGen = iu.makeString(id)
+            associate = new Associate[](associate, new Associate(s, idGen))
+            return idGen
+        }
 	}
 }

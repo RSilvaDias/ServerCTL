@@ -5,10 +5,12 @@ const char CREATE[]     = "create"
 const char LOCAL[]      = "local"
 const char PERCEPTION[] = "perception"
 const char TEST[]		= "test"
+const char FULLTEST[]   = "fulltest"
 const char MR[]			= "mr"
 const char MRR[]		= "mrr"
 const char HD[]			= "hd"
 const char HDR[]		= "hdr"
+const char EXPAND[]     = "expand"
 const char EXIT[]       = "exit"
 
 
@@ -29,9 +31,11 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		out.println(" $(MRR) - to distribute getMRR")
 		out.println(" $(HD) - to distribute getHD")
 		out.println(" $(HDR) - to distribute getHDR")
+        out.println(" $(EXPAND) - to change memory config")
         out.println(" $(PERCEPTION) - to get Perception Data")
 		out.println(" $(LOCAL) - to bring list locally")
         out.println(" $(TEST) - to start cycles of testing")
+        out.println(" $(FULLTEST) - to run the test on the study case setup")
 		out.println(" $(EXIT) - to finish execution")
 	}
 
@@ -45,9 +49,47 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
         }    
 		perception.setConfig(localConfigs[j].string)
 		out.println("$(debugMSG) Local composition running.")
-        out.println("$(localConfigs[j].string)")
+        //out.println("$(localConfigs[j].string)")
         out.println(" ")
 	}
+
+    void localextended() {
+        int j
+        for ( int i = 0 ; i < localConfigs.arrayLength; i++){
+            if ((strUtil.ifind(localConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+               (strUtil.ifind(localConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
+                j = i
+            }
+        }    
+		perception.setConfig(localConfigs[j].string)
+		out.println("$(debugMSG) Extended composition running.")
+        //out.println("$(localConfigs[j].string)")
+        out.println(" ")
+	}
+
+    //Distributed config for HD component to run FULLTEST
+    void distributedConfig(){
+		char j[]
+        int qt = 2
+        SCTL.create_pods("hd",qt)
+                        
+        for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
+			if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
+                    (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
+                    (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") != StringUtil.NOT_FOUND) &&
+                    (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") == StringUtil.NOT_FOUND) &&
+                    (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
+                    (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
+		    			//out.println("$(i) - $(remoteConfigs[i].string)")
+			    		//out.println(" ")
+                        j = iu.makeString(i)
+			}
+		}
+		out.println("Connecting to Pods ")
+		perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
+        t.sleep(5000)
+        out.println("$(debugMSG) Remote composition [(hd/getHDProxy.o)] running.")
+    }
 
 	void distribute(char proxyInterface[]) {
     char remoteConfig[] = getRemoteConfig("$(proxyInterface)")
@@ -104,6 +146,8 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 						help()
 					} else if (cmd == LOCAL) {
 						local()
+                    } else if (cmd == EXPAND) {
+                        localextended()
 					} else if (cmd == MR) {
                         out.println("Amount of pods: ")
                         quantity = in.readln()
@@ -127,8 +171,8 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                         out.println("Connecting to Pods on config $(j)")
                         perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
                         // TODO: Debug this
-                        // Even when pods are already running, need some extra time to avoid connection error.
-                        t.sleep(10000)
+                        
+                        
                         out.println("$(debugMSG) Remote composition [(mr/getMRProxy.o)] running.")
                         //distribute("mr/getMRProxy.o")
 
@@ -152,7 +196,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 						}
 						out.println("Connecting to Pods on config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-                        t.sleep(10000)
+                        
                         out.println("$(debugMSG) Remote composition [(mrr/getMRRProxy.o)] running.")
                         //distribute("mrr/getMRRProxy.o")
 					} else if (cmd == HD){
@@ -176,7 +220,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 						}
 						out.println("Connecting to Pods on config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-                        t.sleep(10000)
+                        
                         out.println("$(debugMSG) Remote composition [(hd/getHDProxy.o)] running.")
                         //distribute("hd/getHDProxy.o")
 					} else if (cmd == HDR){
@@ -184,11 +228,11 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                         quantity = in.readln()
                         qt = iu.intFromString(quantity)
                         SCTL.create_pods("hdr",qt)
-                        // Removed Sleep as ServerCTL deployment always check for status while creating pods.
+                        
                         for ( int i = 0 ; i < remoteConfigs.arrayLength; i++){
 							if ((strUtil.ifind(remoteConfigs[i].string,"mr/getMRProxy.o") == StringUtil.NOT_FOUND ) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"mrr/getMRRProxy.o") == StringUtil.NOT_FOUND) &&
-                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") == StringUtil.NOT_FOUND) &&
+                                (strUtil.ifind(remoteConfigs[i].string,"hd/getHDProxy.o") != StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"hdr/getHDRProxy.o") != StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"cache/CacheLRU.o") == StringUtil.NOT_FOUND) &&
                                 (strUtil.ifind(remoteConfigs[i].string,"cache/CacheExtended.o") != StringUtil.NOT_FOUND)){
@@ -200,7 +244,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 						
 						out.println("Connecting to Pods with config $(j)")
 						perception.setConfig(remoteConfigs[iu.intFromString(j)].string)
-                        t.sleep(10000)
+                    
                         out.println("$(debugMSG) Remote composition [(hdr/getHDRProxy.o)] running.")
                         //distribute("hdr/getHDRProxy.o")
                     }else if(cmd == PERCEPTION){
@@ -211,6 +255,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                         int numberOfCycles = 0
                         char resultFileName[] = null
                         char allConfigsOp[] = null
+                        char configHandler[] = "Test"
                         out.println("$(debugMSG) Test setup!\n$(debugMSG) Please provide the number of test cycles:")
                         out.print(" test> ")
                         numberOfCycles = iu.intFromString(in.readln())
@@ -240,10 +285,89 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
                             perception.getPerceptionData()
                             for (int i = 0; i < numberOfCycles; i++) {
                                 t.sleep(observationWindow)
-                                handlePerception(perception.getPerceptionData(), outF)
+                                handlePerception(perception.getPerceptionData(), outF, configHandler)
                             }
                             if (configsStr.arrayLength > 1) { outF.writeLine("\n\n") }
                         }
+                        outF.close()
+                        out.println("$(debugMSG) Test finished.")
+                    } else if (cmd == FULLTEST) {
+                        int observationWindow = 0
+                        int numberOfCycles = 0
+                        char resultFileName[] = null
+                        char allConfigsOp[] = null
+                        char configHandler[] = null
+                        
+                        //out.println("$(debugMSG) Name of output file:")
+                        //out.print(" test> ")
+                        //resultFileName = in.readln()
+                        resultFileName = "fulltest.txt"
+                        out.println("$(debugMSG) Test setup!\n")
+                        // "local configuration" test setup
+                        // Local refers to all components together in one singular pod
+                        local()
+                        out.println("$(debugMSG) Number of cycles : 10 ")
+                        numberOfCycles = 10
+                        out.println("$(debugMSG) Observation window size (ms): 1000 ")
+                        observationWindow = 1000
+                        configHandler = "Local"
+                        configsStr = new String[](new String(perception.getConfig()))     
+                        out.println("$(debugMSG) Starting test on Local Configuration...")
+                        in.readln()
+                        TextFile outF = new TextFile(resultFileName, File.WRITE)
+                        for (int confCount = 0; confCount < configsStr.arrayLength; confCount++) {
+                            perception.setConfig(configsStr[confCount].string)
+                            outF.writeLine(new char[]("config, ", getVariant(configsStr[confCount].string)))
+                            perception.getPerceptionData()
+                            for (int i = 0; i < numberOfCycles; i++) {
+                                t.sleep(observationWindow)
+                                handlePerception(perception.getPerceptionData(), outF, configHandler)
+                            }
+                            if (configsStr.arrayLength > 1) { outF.writeLine("\n\n") }
+                        }
+                        // Extended memory configuration
+                        out.println("Changing to Extended Configuration")
+                        in.readln()
+                        localextended()
+                        out.println("$(debugMSG) Number of cycles : 10 ")
+                        numberOfCycles = 10
+                        out.println("$(debugMSG) Observation window size (ms): 1000 ")
+                        observationWindow = 1000
+                        configHandler = "LocalExtended"
+                        configsStr = new String[](new String(perception.getConfig()))
+                        out.println("$(debugMSG) Starting test...")
+                        for (int confCount = 0; confCount < configsStr.arrayLength; confCount++) {
+                            perception.setConfig(configsStr[confCount].string)
+                            outF.writeLine(new char[]("config, ", getVariant(configsStr[confCount].string)))
+                            perception.getPerceptionData()
+                            for (int i = 0; i < numberOfCycles; i++) {
+                                t.sleep(observationWindow)
+                                handlePerception(perception.getPerceptionData(), outF, configHandler)
+                            }
+                            if (configsStr.arrayLength > 1) { outF.writeLine("\n\n") }
+                        }
+                        // Distributed configuration -
+                        out.println("Changing to Distributed Configuration")
+                        in.readln()
+                        distributedConfig()
+                        out.println("$(debugMSG) Number of cycles : 10 ")
+                        numberOfCycles = 10
+                        out.println("$(debugMSG) Observation window size (ms): 1000 ")
+                        observationWindow = 1000
+                        configHandler = "Distributed"
+                        configsStr = new String[](new String(perception.getConfig()))
+                        out.println("$(debugMSG) Starting test...")
+                        for (int confCount = 0; confCount < configsStr.arrayLength; confCount++) {
+                            perception.setConfig(configsStr[confCount].string)
+                            outF.writeLine(new char[]("config, ", getVariant(configsStr[confCount].string)))
+                            perception.getPerceptionData()
+                            for (int i = 0; i < numberOfCycles; i++) {
+                                t.sleep(observationWindow)
+                                handlePerception(perception.getPerceptionData(), outF, configHandler)
+                            }
+                            if (configsStr.arrayLength > 1) { outF.writeLine("\n\n") }
+                        }
+
                         outF.close()
                         out.println("$(debugMSG) Test finished.")
                     } else {
@@ -260,7 +384,7 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		}
 		return null
 	}
-    void handlePerception(char perceptionData[], TextFile file) {
+    void handlePerception(char perceptionData[], TextFile file, char configHandler[]) {
 		if (perceptionData == "{}") {
 			out.println("$(debugMSG) No perception data.")
 			return
@@ -270,12 +394,13 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		int count = 0
 		PerceptionData pD[] = encoder.jsonToArray(perceptionData, typeof(PerceptionData[]), null)
 		if (((pD != null) && (pD.arrayLength > 0)) && (pD[0].metrics.arrayLength > 0)) {
-			result = new char[]("[ "," ] - ")
+			result = new char[]("[ ","$(configHandler)"," ] - ")
 			value = pD[0].metrics[0].value
 			count = pD[0].metrics[0].counter
 			dec metricValue = value/count
-			result = new char[](result, pD[0].metrics[0].name, ": ", du.decToString(metricValue), " ms")
-			out.println("$(debugMSG) $(result)")
+			//result = new char[](result, pD[0].metrics[0].name, ": ", du.decToString(metricValue), " ms")
+            result = new char[](du.decToString(metricValue))
+			out.println("$(debugMSG) Response Time : $(result) ms")
             if (file != null) { file.writeLine("$(debugMSG) $(result)") }
 		} else {
 			out.println("$(debugMSG) No perception data.")
@@ -331,13 +456,17 @@ component provides App requires io.Output out, data.StringUtil strUtil, data.Int
 		perception = new Perception(true)
 		/* Loading target system and adding a monitoring proxy to it */
 		perception.setMain("../repository/TCPNetwork.o", null)
+        /*
         out.println("$(debugMSG) Adding Monitoring Proxy...")
         perception.addProxy("|../distributor/monitoring/proxies/DCProxy.o|*(*:hh.HTTPHandler[0]:*)|")
         out.println("$(debugMSG) Proxy added!")
+        */
+
         String configs[] = perception.getAllConfigs()
-		/*for (int i = 0; i < configs.arrayLength; i++) {
-			out.println("$(debugMSG) $(iu.intToString(i+1)): $(configs[i].string)")
-		}*/
+		for (int i = 0; i < configs.arrayLength; i++) {
+			out.println("$(debugMSG) $(iu.intToString(i+1)): $(configs[i].string)\n")
+
+		}
 		loadDistributedProxies()
 		remoteLocalSeparation()
 		local()

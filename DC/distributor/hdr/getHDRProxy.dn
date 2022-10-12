@@ -33,6 +33,7 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
 	IPAddr remoteListsIps[] = null
 	Mutex remoteListsIpsLock = new Mutex()
 	Mutex idLock = new Mutex()
+    Mutex lock2 = new Mutex()
 	bool flagDocStream = true
 	TCPServerSocket sDocStream = null
 
@@ -47,7 +48,7 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
             int q1 = SCTL.get_hdr()
             qtt = q1
             remoteDistsIps = new IPAddr[q1]
-            t.sleep(5000)
+            t.sleep(4500)
             for (int i = 0; i < q1 ; i++){
                 remoteDistsIps[i] = new IPAddr()
                 char nameip[] = "$name$(iu.makeString(i))"
@@ -59,15 +60,17 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
     }
     // RemoteFunction
 	void setupRemoteListsIPs() {
-		if (remoteListsIps == null) {
+		mutex(lock2){
+        if (remoteListsIps == null) {
 			remoteListsIps = new IPAddr[qtt]
-            t.sleep(2000)
+            
 			for ( int i = 0 ; i < qtt ; i++){
                 remoteListsIps[i] = new IPAddr()
                 char listip[] = "$name$(iu.makeString(i))"
 			    remoteListsIps[i].ip = new char[](listip)
 			    remoteListsIps[i].port = 2010
             }
+        }
         }		
 	}
 
@@ -147,27 +150,16 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
 		return connectAndSend(addr, content, true)
 	}
 
-	char[] idGenerator() {
-		/*int genId = 0
-		mutex(idLock) {
-			genId = iu.makeString(++id)
-		}
-		return genId*/
-		mutex(idLock) {
-			id++
-			return iu.makeString(id)
-		}
-	}
 
 	void getHDR:gHDR(char uuid[],DocStream stream) {
-		Request request = new Request()
+		out.println("[[[[ get HDR ]]]]")
+        Request request = new Request()
 		request.functionName = gHDR_FUNC
 		request.numParams = 4 // this should be changed
 		char requestStr[] = parser.jsonFromData(request, null)
-		char idGen[] = idGenerator()
-		dcRp.associate(stream, idGen)
+		char idGen[] = dcRp.associate(stream)
 		//TODO think about this msg format
-		char content2[] = new char[](requestStr, "!", "distributor!5012!", idGen, "!", uuid, "\r\r\r\r")
+		char content2[] = new char[](requestStr, "!", "distributor!5014!", idGen, "!", uuid, "\r\r\r\r")
 		Response response = makeRequest(content2)
 	}
 
@@ -193,6 +185,7 @@ component provides hdr.getHDR(AdaptEvents) requires  data.json.JSONEncoder parse
 
 	// this is extremely hardcoded! ):
 	void AdaptEvents:active() {
+        out.println(" *** active HDR PROXY ******")
 		char msg[] = new char[]("../distributor/RemoteHDR.o!", "\r\r\r\r")
 		sendMsgToRemoteDists(msg)
 		// server

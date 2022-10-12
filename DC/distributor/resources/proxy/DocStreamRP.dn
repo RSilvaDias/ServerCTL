@@ -2,6 +2,6 @@
  uses net.TCPSocket
 
  interface DocStreamRP {
-	void associate(store DocStream s, char id[])
+	char[] associate(store DocStream s)
 	void processDocStream(TCPSocket s)
  }

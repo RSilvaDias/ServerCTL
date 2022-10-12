@@ -1,13 +1,25 @@
 // Least Recently Used (LRU) Cache Component
-// Cache Extended for Remote distribution
-
+//
+// Please note:
+//  * this componeont is not thread safe
+//  * this component is not optimised for memory efficiency
+//  * this component implements the classical hashtable with chaining
+//  * this component does not implement cached item expiration
+//  * we also consider that the size of the cached item is never bigger than CACHE_MAX_SIZE
+// Comments:
+//  * I wonder whether garbage collector is working with this implementation
+// and preventing memory leak
+//
+// Author: Roberto Rodrigues Filho
+// Date: December, 2019
 
 component provides cache.Cache requires cache.Hash hashFunc, io.Output out, 
 	time.DateUtil dateUtil, time.Calendar calendar {
 	
 	CacheItem table[] = new CacheItem[Cache.TABLE_SIZE]
 	int cacheSize = 0
-    const int CACHE_MAX_SIZE = 10000 // 10kb
+    const int CACHE_MAX_SIZE = 150000 // 10kb
+    static Mutex lock = new Mutex()
 
 	// ----- managing eviction queue
 	CacheItem mru = null // tail
@@ -65,7 +77,8 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 	}
 
 	byte[] Cache:get(char key[]) {
-		int index = hashFunc.hash(key)
+		mutex(lock){
+        int index = hashFunc.hash(key)
 		if (table[index] == null) {
 			return null
 		} else {
@@ -91,6 +104,7 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 			}
 		}
 		return null
+        }
 	}
 
 	// before calling update, insert calls get -- we don't have to update the queue
@@ -106,7 +120,8 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 	
 	// not thread safe -- updates and descreases cacheSize variable
 	void Cache:insert(char key[], byte content[], int maxAge) {
-		if (content.arrayLength > CACHE_MAX_SIZE) {
+		mutex(lock){
+        if (content.arrayLength > CACHE_MAX_SIZE) {
 			throw new Exception("Error! Cached item size is bigger than CACHE_MAX_SIZE!")
 		}
 		if (get(key) != null) { 
@@ -131,9 +146,11 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 		}
 		cacheSize = cacheSize + item.content.arrayLength
 		addToQueue(item)
+        }
 	}
 
 	void Cache:delete(char key[]) {
+        mutex(lock){
 		int index = hashFunc.hash(key)
 		if (table[index] != null) {
 			CacheItem current = table[index]
@@ -168,6 +185,7 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 				current = current.chainNext
 			}
 		}
+        }
 	}
 
 	void printHashTable() {
@@ -183,9 +201,11 @@ component provides cache.Cache requires cache.Hash hashFunc, io.Output out,
 	}
 
 	void Cache:deleteAll() {
+        mutex(lock){
 		table = new CacheItem[Cache.TABLE_SIZE]
 		mru = null
 		lru = null
 		cacheSize = 0
+        }
 	}
 }

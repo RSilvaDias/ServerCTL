@@ -1,16 +1,23 @@
 // high entropy low volume of data
 // sequencial testing {1,2,3,4,5,...,50}
-// Using Most Recent Data Resource entrypoint - MMR
+// Using Most Recent Data Resource entrypoint - MRR
 
 component provides App requires io.Output out, net.http.HTTPRequest request, 
-	data.IntUtil iu, time.Calendar ic, time.DateUtil dateUtil {
+	data.IntUtil iu, time.Calendar ic, time.DateUtil dateUtil,io.TextFile {
 	int App:main(AppParam params[]) {
 		int id = 0
-		while(true) {
-			id++
+        DateTime t1 = null
+        DateTime t2 = null
+        t1 = ic.getTime()
+        char resultFileName[] = "demonstration.txt"
+        TextFile outF = new TextFile(resultFileName, File.WRITE)
+		outF.writeLine(new char[]("client "))
+        //for(int n = 0 ; n < 2000 ; n++) {
+		while(true){
+        	id++
 			if (id > 50) { id = 1 }
 			char url[] = new char[]("34.121.20.15:8081/collector/resources/", iu.intToString(id), "/data/last")
-            //char url[] = new char[]("localhost:8080/collector/resources/", iu.intToString(id), "/data/last")
+            //char url[] = new char[]("localhost:8081/collector/resources/", iu.intToString(id), "/data/last")
 			DateTime dt1 = null
 			DateTime dt2 = null
 			int result = 0
@@ -20,8 +27,17 @@ component provides App requires io.Output out, net.http.HTTPRequest request,
 			if ((dt1 != null) && (dt2 != null)) {
 				result = dateUtil.toMilliseconds(dateUtil.diff(dt1, dt2))
 			}
-			out.println("MMR - id : $(iu.intToString(id)) , response time: $(iu.intToString(result)) ms")
+			//out.println("[ $(iu.intToString(n)) ] - MRR - id : $(iu.intToString(id)) , response time: $(iu.intToString(result)) ms")
+            out.println("MRR - id : $(iu.intToString(id)) , response time: $(iu.intToString(result)) ms")
+
+            outF.writeLine("$(iu.intToString(result))")
 		}
+        t2 = ic.getTime()
+        int result = 0
+        result = dateUtil.toMilliseconds(dateUtil.diff(t1, t2)) 
+        out.println("Total time : $(result) ")
+        outF.writeLine("Time elapsed for 2000 requests : $(result) ms")
+        outF.close()
 		return 0
 	}
 }
